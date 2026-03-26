@@ -63,7 +63,7 @@ export function InstagramModal({ url, type, onClose }: InstagramModalProps) {
               <line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/>
             </svg>
             <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--text)' }}>
-              @chleacare
+              @chlea.carerd
             </span>
             <span style={{
               fontSize: 10, fontWeight: 700, textTransform: 'uppercase',

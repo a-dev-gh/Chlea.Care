@@ -385,7 +385,7 @@ export function HomePage() {
             fontWeight: 600, fontStyle: 'italic',
             color: 'var(--text)',
           }}>
-            @chleacare
+            @chlea.carerd
           </h2>
         </div>
 
