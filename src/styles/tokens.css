@@ -1,0 +1,36 @@
+:root {
+  /* Brand palette */
+  --hot: #EB1982;
+  --pink: #ffc2d1;
+  --deep: #552814;
+
+  /* Neutrals */
+  --cream: #fefafb;
+  --white: #ffffff;
+  --border: rgba(235, 25, 130, 0.12);
+  --border2: rgba(235, 25, 130, 0.25);
+
+  /* Text */
+  --text: #552814;
+  --text-soft: #7a4a38;
+  --text-muted: #b09090;
+
+  /* Men's section */
+  --men-bg: #552814;
+  --men-text: #fefafb;
+  --men-accent: #ffc2d1;
+
+  /* Shadows */
+  --shadow-sm: 0 2px 12px rgba(235,25,130,0.08);
+  --shadow-md: 0 8px 40px rgba(235,25,130,0.14);
+
+  /* Border radius */
+  --r-sm: 8px;
+  --r-md: 16px;
+  --r-lg: 24px;
+  --r-pill: 100px;
+
+  /* Typography */
+  --font-display: 'Cormorant Garamond', Georgia, serif;
+  --font-body: 'DM Sans', sans-serif;
+}
