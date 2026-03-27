@@ -10,7 +10,7 @@ export function BrandsPage() {
         <p className="section-label" style={{ marginBottom: 8 }}>Curado con amor</p>
         <h1 className="section-title">Nuestras Marcas</h1>
         <p style={{ fontSize: 15, color: 'var(--text-muted)', marginTop: 12 }}>
-          Seleccionadas cuidadosamente por Denise para garantizar calidad y resultados reales.
+          Seleccionadas cuidadosamente por Denisee para garantizar calidad y resultados reales.
         </p>
       </div>
 

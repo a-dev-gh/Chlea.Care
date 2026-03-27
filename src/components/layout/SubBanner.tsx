@@ -9,7 +9,7 @@ export function SubBanner() {
   const messages = [
     '📱 +1 (809) 775-6773 · WhatsApp',
     settings.banner_text,
-    'Con amor, por Denise Ventura 🩷',
+    'Con amor, por Denisee Ventura 🩷',
   ];
 
   useEffect(() => {

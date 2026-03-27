@@ -1,179 +1,169 @@
-import { useRef } from 'react';
 import { Link } from 'react-router-dom';
-import { SEED_BRANDS, SEED_PRODUCTS } from '../data/seedData';
+import { SEED_BRANDS } from '../data/seedData';
 
 export function BrandsCarousel() {
-  const scrollRef = useRef<HTMLDivElement>(null);
-
-  function scrollBy(dir: number) {
-    scrollRef.current?.scrollBy({ left: dir * 340, behavior: 'smooth' });
-  }
+  // Duplicate list for seamless infinite loop
+  const brands = [...SEED_BRANDS, ...SEED_BRANDS];
 
   return (
-    <section style={{ padding: '72px 24px', background: 'var(--cream)' }}>
-      <div style={{ maxWidth: 1280, margin: '0 auto' }}>
-        {/* Header */}
-        <div style={{ textAlign: 'center', marginBottom: 40 }}>
-          <p className="section-label" style={{ marginBottom: 8 }}>Calidad garantizada</p>
-          <h2 style={{
-            fontFamily: 'var(--font-display)',
-            fontSize: 'clamp(1.8rem, 4vw, 2.8rem)',
-            fontWeight: 600,
-            fontStyle: 'italic',
-            color: 'var(--text)',
-          }}>
-            Nuestras Marcas
-          </h2>
-        </div>
+    <section style={{ padding: '64px 0', background: 'var(--cream)', overflow: 'hidden' }}>
+      <div style={{ textAlign: 'center', marginBottom: 40, padding: '0 24px' }}>
+        <p className="section-label" style={{ marginBottom: 8 }}>Calidad garantizada</p>
+        <h2 style={{
+          fontFamily: 'var(--font-display)',
+          fontSize: 'clamp(1.8rem, 4vw, 2.8rem)',
+          fontWeight: 600,
+          fontStyle: 'italic',
+          color: 'var(--text)',
+        }}>
+          Nuestras Marcas
+        </h2>
+      </div>
 
-        {/* Carousel */}
-        <div style={{ position: 'relative' }}>
-          <div
-            ref={scrollRef}
-            style={{
-              display: 'flex',
-              gap: 20,
-              overflowX: 'auto',
-              scrollSnapType: 'x mandatory',
-              scrollbarWidth: 'none',
-              padding: '4px 0 16px',
-            }}
-            className="brands-scroll"
-          >
-            {SEED_BRANDS.map(brand => {
-              const productCount = SEED_PRODUCTS.filter(p => p.brand === brand.name).length;
-              return (
-                <Link
-                  key={brand.slug}
-                  to={`/marcas/${brand.slug}`}
-                  style={{
-                    minWidth: 300,
-                    maxWidth: 300,
-                    scrollSnapAlign: 'start',
-                    flexShrink: 0,
-                    textDecoration: 'none',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    borderRadius: 'var(--r-md)',
-                    overflow: 'hidden',
-                    background: 'var(--white)',
-                    border: '1px solid var(--border)',
-                    transition: 'all 0.28s ease',
-                    cursor: 'pointer',
-                  }}
-                  onMouseEnter={e => {
-                    const el = e.currentTarget;
-                    el.style.transform = 'translateY(-6px)';
-                    el.style.boxShadow = 'var(--shadow-md)';
-                  }}
-                  onMouseLeave={e => {
-                    const el = e.currentTarget;
-                    el.style.transform = 'translateY(0)';
-                    el.style.boxShadow = 'none';
-                  }}
-                >
-                  {/* Image placeholder — tall card like Alfaparf */}
-                  <div style={{
-                    height: 280,
-                    background: 'linear-gradient(160deg, #f8f0f3 0%, #ffd6e7 50%, #ffeaf3 100%)',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    position: 'relative',
-                  }}>
-                    {/* Placeholder orb with brand initial */}
-                    <div style={{
-                      width: 90, height: 90, borderRadius: '50%',
-                      background: 'rgba(255,255,255,0.7)',
-                      backdropFilter: 'blur(8px)',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      fontFamily: 'var(--font-display)',
-                      fontSize: 36, fontWeight: 600, fontStyle: 'italic',
-                      color: 'var(--hot)',
-                      boxShadow: '0 4px 20px rgba(235,25,130,0.12)',
-                    }}>
-                      {brand.name.charAt(0)}
-                    </div>
-                  </div>
-
-                  {/* Footer with name + arrow */}
-                  <div style={{
-                    padding: '20px 22px',
-                    display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between',
-                    gap: 12,
-                  }}>
-                    <div>
-                      <h3 style={{
-                        fontFamily: 'var(--font-display)',
-                        fontSize: 20, fontWeight: 600,
-                        color: 'var(--text)',
-                        marginBottom: 4,
-                        lineHeight: 1.2,
-                      }}>
-                        {brand.name}
-                      </h3>
-                      <p style={{ fontSize: 13, color: 'var(--text-muted)', lineHeight: 1.4 }}>
-                        {brand.tagline}
-                      </p>
-                    </div>
-                    <div style={{
-                      width: 36, height: 36, borderRadius: '50%',
-                      background: 'var(--cream)',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      flexShrink: 0,
-                      transition: 'background 0.2s',
-                    }}>
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text-soft)" strokeWidth="2.5">
-                        <path d="M5 12h14M12 5l7 7-7 7"/>
-                      </svg>
-                    </div>
-                  </div>
-                </Link>
-              );
-            })}
-          </div>
-
-          {/* Navigation dots + arrows — Alfaparf style */}
-          <div style={{
-            display: 'flex', justifyContent: 'center', alignItems: 'center',
-            gap: 20, marginTop: 24,
-          }}>
-            {/* Dot indicators */}
-            <div style={{ display: 'flex', gap: 6 }}>
-              {SEED_BRANDS.map((_, i) => (
-                <div key={i} style={{
-                  width: i === 0 ? 28 : 8, height: 4,
-                  borderRadius: 2,
-                  background: i === 0 ? 'var(--hot)' : 'var(--border2)',
-                  transition: 'all 0.2s',
-                }} />
-              ))}
-            </div>
-
-            {/* Forward arrow button */}
-            <button
-              onClick={() => scrollBy(1)}
-              style={{
-                width: 48, height: 48, borderRadius: '50%',
-                background: 'var(--hot)', border: 'none',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                cursor: 'pointer',
-                boxShadow: '0 4px 16px rgba(235,25,130,0.3)',
-                transition: 'all 0.2s',
-              }}
-              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.transform = 'scale(1.08)'; }}
-              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.transform = 'scale(1)'; }}
+      {/* Row 1 — scrolls left */}
+      <div className="marquee-track" style={{ marginBottom: 20 }}>
+        <div className="marquee-strip marquee-left">
+          {brands.map((brand, i) => (
+            <Link
+              key={`r1-${i}`}
+              to={`/marcas/${brand.slug}`}
+              className="brand-pill"
             >
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5">
-                <path d="M5 12h14M12 5l7 7-7 7"/>
-              </svg>
-            </button>
-          </div>
+              <span className="brand-pill-initial">{brand.name.charAt(0)}</span>
+              <span className="brand-pill-name">{brand.name}</span>
+            </Link>
+          ))}
         </div>
       </div>
 
+      {/* Row 2 — scrolls right (reversed list for variety) */}
+      <div className="marquee-track">
+        <div className="marquee-strip marquee-right">
+          {[...brands].reverse().map((brand, i) => (
+            <Link
+              key={`r2-${i}`}
+              to={`/marcas/${brand.slug}`}
+              className="brand-pill"
+            >
+              <span className="brand-pill-initial">{brand.name.charAt(0)}</span>
+              <span className="brand-pill-name">{brand.name}</span>
+            </Link>
+          ))}
+        </div>
+      </div>
+
+      {/* CTA */}
+      <div style={{ textAlign: 'center', marginTop: 36, padding: '0 24px' }}>
+        <Link to="/marcas" style={{
+          display: 'inline-flex', alignItems: 'center', gap: 8,
+          color: 'var(--hot)', fontSize: 14, fontWeight: 600,
+          textDecoration: 'none',
+          borderBottom: '1.5px solid var(--hot)',
+          paddingBottom: 2,
+          transition: 'opacity 0.2s',
+        }}>
+          Ver todas las marcas →
+        </Link>
+      </div>
+
       <style>{`
-        .brands-scroll::-webkit-scrollbar { display: none; }
+        .marquee-track {
+          width: 100%;
+          overflow: hidden;
+          mask-image: linear-gradient(90deg, transparent 0%, black 8%, black 92%, transparent 100%);
+          -webkit-mask-image: linear-gradient(90deg, transparent 0%, black 8%, black 92%, transparent 100%);
+        }
+
+        .marquee-strip {
+          display: flex;
+          gap: 16px;
+          width: max-content;
+          will-change: transform;
+        }
+
+        .marquee-left {
+          animation: marqueeLeft 45s linear infinite;
+        }
+        .marquee-right {
+          animation: marqueeRight 50s linear infinite;
+        }
+
+        .marquee-track:hover .marquee-strip {
+          animation-play-state: paused;
+        }
+
+        @keyframes marqueeLeft {
+          0%   { transform: translateX(0); }
+          100% { transform: translateX(-50%); }
+        }
+        @keyframes marqueeRight {
+          0%   { transform: translateX(-50%); }
+          100% { transform: translateX(0); }
+        }
+
+        .brand-pill {
+          display: inline-flex;
+          align-items: center;
+          gap: 10px;
+          padding: 12px 24px;
+          background: var(--white);
+          border: 1.5px solid var(--border);
+          border-radius: var(--r-pill);
+          text-decoration: none;
+          white-space: nowrap;
+          flex-shrink: 0;
+          transition: all 0.28s cubic-bezier(0.34, 1.56, 0.64, 1);
+          cursor: pointer;
+        }
+
+        .brand-pill:hover {
+          border-color: var(--hot);
+          transform: translateY(-4px) scale(1.05);
+          box-shadow: 0 8px 24px rgba(235, 25, 130, 0.15);
+          background: #fff5f9;
+        }
+
+        .brand-pill-initial {
+          width: 32px;
+          height: 32px;
+          border-radius: 50%;
+          background: linear-gradient(135deg, var(--hot), #ff6b9d);
+          color: #fff;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-family: var(--font-display);
+          font-size: 15px;
+          font-weight: 600;
+          font-style: italic;
+          flex-shrink: 0;
+        }
+
+        .brand-pill-name {
+          font-family: var(--font-body);
+          font-size: 14px;
+          font-weight: 600;
+          color: var(--text);
+          letter-spacing: 0.3px;
+        }
+
+        .brand-pill:hover .brand-pill-name {
+          color: var(--hot);
+        }
+
         @media (max-width: 600px) {
-          .brands-scroll > a { min-width: 260px !important; max-width: 260px !important; }
+          .brand-pill {
+            padding: 10px 18px;
+            gap: 8px;
+          }
+          .brand-pill-initial {
+            width: 28px;
+            height: 28px;
+            font-size: 13px;
+          }
+          .brand-pill-name {
+            font-size: 13px;
+          }
         }
       `}</style>
     </section>

@@ -25,8 +25,7 @@ export const SEED_CATEGORIES: SeedCategory[] = [
   { name: 'Cabello',    slug: 'cabello',    is_men: false, sort_order: 1 },
   { name: 'Skincare',   slug: 'skincare',   is_men: false, sort_order: 2 },
   { name: 'Accesorios', slug: 'accesorios', is_men: false, sort_order: 3 },
-  { name: 'Ropa',       slug: 'ropa',       is_men: false, sort_order: 4 },
-  { name: 'Hombres',    slug: 'hombres',    is_men: true,  sort_order: 5 },
+  { name: 'Hombres',    slug: 'hombres',    is_men: true,  sort_order: 4 },
 ];
 
 export const SEED_PRODUCTS: SeedProduct[] = [
@@ -178,3 +177,46 @@ export const SEED_BRANDS = [
   { name: 'Olaplex',           slug: 'olaplex',           tagline: 'Ciencia que repara enlaces' },
   { name: 'Bath & Body Works', slug: 'bath-body-works',   tagline: 'Body care premium americano' },
 ];
+
+/**
+ * Nav dropdown subcategories — Denise can edit these in Admin > Navegación.
+ * Max 5 items per category. These populate the brown CategoryNav hover dropdowns.
+ */
+export interface NavDropdownItem {
+  label: string;
+  href: string;
+}
+
+export const SEED_NAV_DROPDOWNS: Record<string, NavDropdownItem[]> = {
+  'cabello': [
+    { label: 'Shampoo & Acondicionador', href: '/catalogo?categoria=cabello&etiqueta=shampoo' },
+    { label: 'Mascarillas & Tratamientos', href: '/catalogo?categoria=cabello&etiqueta=mascarillas' },
+    { label: 'Aceites & Sérums', href: '/catalogo?categoria=cabello&etiqueta=aceites' },
+    { label: 'Leave-In & Styling', href: '/catalogo?categoria=cabello&etiqueta=styling' },
+    { label: 'Color & Tintes', href: '/catalogo?categoria=cabello&etiqueta=color' },
+  ],
+  'skincare': [
+    { label: 'Limpieza', href: '/catalogo?categoria=skincare&etiqueta=limpieza' },
+    { label: 'Sérums & Tratamientos', href: '/catalogo?categoria=skincare&etiqueta=serums' },
+    { label: 'Hidratantes', href: '/catalogo?categoria=skincare&etiqueta=hidratantes' },
+    { label: 'Exfoliantes & Scrubs', href: '/catalogo?categoria=skincare&etiqueta=exfoliantes' },
+    { label: 'Body Care', href: '/catalogo?categoria=skincare&etiqueta=bodycare' },
+  ],
+  'accesorios': [
+    { label: 'Herramientas de Cabello', href: '/catalogo?categoria=accesorios&etiqueta=herramientas' },
+    { label: 'Brochas & Aplicadores', href: '/catalogo?categoria=accesorios&etiqueta=brochas' },
+    { label: 'Organizadores', href: '/catalogo?categoria=accesorios&etiqueta=organizadores' },
+  ],
+  'marcas': [
+    { label: 'Davines', href: '/marcas/davines' },
+    { label: 'Alfaparf Milano', href: '/marcas/alfaparf-milano' },
+    { label: 'Olaplex', href: '/marcas/olaplex' },
+    { label: 'The Ordinary', href: '/marcas/the-ordinary' },
+    { label: 'Lola Cosmetics', href: '/marcas/lola-cosmetics' },
+  ],
+  'ofertas': [
+    { label: 'Hasta 30% Off', href: '/catalogo?filtro=oferta&descuento=30' },
+    { label: 'Hasta 50% Off', href: '/catalogo?filtro=oferta&descuento=50' },
+    { label: 'Combos & Sets', href: '/catalogo?filtro=oferta&etiqueta=combos' },
+  ],
+};

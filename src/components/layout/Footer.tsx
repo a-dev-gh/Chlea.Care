@@ -110,6 +110,15 @@ export function Footer() {
                   <line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/>
                 </svg>
               </a>
+              <a href="https://www.tiktok.com/@chlea.carerd" target="_blank" rel="noreferrer"
+                style={{ color: 'rgba(255,255,255,0.7)', transition: 'color 0.2s' }}
+                onMouseEnter={e => ((e.target as HTMLElement).style.color = 'var(--pink)')}
+                onMouseLeave={e => ((e.target as HTMLElement).style.color = 'rgba(255,255,255,0.7)')}
+              >
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M9 12a4 4 0 1 0 4 4V4a5 5 0 0 0 5 5"/>
+                </svg>
+              </a>
               <a href="https://wa.me/18097756773" target="_blank" rel="noreferrer"
                 style={{ color: 'rgba(255,255,255,0.7)', transition: 'color 0.2s' }}
                 onMouseEnter={e => ((e.target as HTMLElement).style.color = 'var(--pink)')}
@@ -124,7 +133,7 @@ export function Footer() {
         </div>
 
         <div style={{ borderTop: '1px solid rgba(255,255,255,0.12)', paddingTop: 24, textAlign: 'center', fontSize: 13, opacity: 0.55 }}>
-          © 2025 Chlea Care · Con amor, Denise Ventura 🩷
+          © 2025 Chlea Care · Con amor, Denisee Ventura 🩷
         </div>
       </div>
     </footer>

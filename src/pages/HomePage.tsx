@@ -138,22 +138,22 @@ export function HomePage() {
         `}</style>
       </section>
 
-      {/* ── About Denise ── */}
-      <section style={{ padding: '72px 24px', background: 'var(--white)' }}>
-        <div style={{ maxWidth: 780, margin: '0 auto', display: 'flex', gap: 36, alignItems: 'center' }} className="about-grid">
-          {/* Orb — large with photo */}
+      {/* ── About Denisee ── */}
+      <section style={{ padding: '80px 24px', background: 'var(--white)' }}>
+        <div style={{ maxWidth: 900, margin: '0 auto', display: 'flex', gap: 48, alignItems: 'center' }} className="about-grid">
+          {/* Orb — extra large with photo */}
           <div style={{ flexShrink: 0 }}>
             <div style={{
-              width: 260, height: 260,
+              width: 360, height: 360,
               borderRadius: '50%',
               overflow: 'hidden',
-              boxShadow: '0 0 0 6px var(--pink), 0 12px 48px rgba(235,25,130,0.22)',
+              boxShadow: '0 0 0 8px var(--pink), 0 16px 60px rgba(235,25,130,0.22)',
               animation: 'pulse-ring 2.5s infinite',
             }}>
               <img
                 src="/about-photo.webp"
-                alt="Denise Ventura"
-                style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center 20%' }}
+                alt="Denisee Ventura"
+                style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center 15%' }}
               />
             </div>
           </div>
@@ -162,16 +162,17 @@ export function HomePage() {
             <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: 2, textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: 4 }}>
               La fundadora
             </p>
-            <h2 style={{ fontFamily: 'var(--font-display)', fontSize: 30, fontWeight: 400, fontStyle: 'italic', color: 'var(--hot)', marginBottom: 12 }}>
-              Denise Ventura
+            <h2 style={{ fontFamily: 'var(--font-display)', fontSize: 34, fontWeight: 400, fontStyle: 'italic', color: 'var(--hot)', marginBottom: 14 }}>
+              Denisee Ventura
             </h2>
-            <p style={{ fontSize: 15, color: 'var(--text-soft)', lineHeight: 1.75 }}>
+            <p style={{ fontSize: 16, color: 'var(--text-soft)', lineHeight: 1.8 }}>
               {settings.about_text}
             </p>
           </div>
         </div>
-        <style>{`@media (max-width: 600px) {
+        <style>{`@media (max-width: 768px) {
           .about-grid { flex-direction: column; text-align: center; align-items: center; }
+          .about-grid > div:first-child > div { width: 280px !important; height: 280px !important; }
         }`}</style>
       </section>
 
@@ -389,19 +390,20 @@ export function HomePage() {
           </h2>
         </div>
 
-        {/* Full-width 3-column grid — edge to edge, no border-radius */}
+        {/* Full-width grid — edge to edge, only posts with URLs */}
         <div style={{
           display: 'grid',
-          gridTemplateColumns: 'repeat(3, 1fr)',
+          gridTemplateColumns: `repeat(${INSTAGRAM_POSTS.filter(p => p.url).length}, 1fr)`,
           gap: 3,
         }} className="ig-full-grid">
-          {INSTAGRAM_POSTS.map((post, i) => (
+          {INSTAGRAM_POSTS.filter(p => p.url).map((post, i) => (
             <button
               key={i}
               onClick={() => setIgModal({ url: post.url, type: post.type })}
               style={{
                 display: 'block',
-                aspectRatio: '1/1',
+                aspectRatio: post.type === 'reel' ? '9/16' : '1/1',
+                maxHeight: 500,
                 overflow: 'hidden',
                 position: 'relative',
                 border: 'none',
@@ -410,21 +412,31 @@ export function HomePage() {
                 background: post.placeholder,
               }}
             >
-              {/* Instagram embed iframe — oversized to show image at full width, offset to skip IG header */}
-              <iframe
-                src={getEmbedUrl(post.url)}
-                style={{
-                  width: '100%',
-                  height: '300%',
-                  border: 'none',
-                  pointerEvents: 'none',
-                  position: 'absolute',
-                  left: 0,
-                  top: '-64px',
-                }}
-                loading="lazy"
-                title={`Instagram ${post.type}`}
-              />
+              {/* Instagram embed — scaled up so image fills the card */}
+              <div style={{
+                position: 'absolute',
+                top: 0, left: 0,
+                width: '100%',
+                height: '100%',
+                overflow: 'hidden',
+              }}>
+                <iframe
+                  src={getEmbedUrl(post.url)}
+                  style={{
+                    position: 'absolute',
+                    top: '-60px',
+                    left: '-1px',
+                    width: 'calc(100% + 2px)',
+                    height: 'calc(100% + 120px)',
+                    border: 'none',
+                    pointerEvents: 'none',
+                    transform: 'scale(1)',
+                    transformOrigin: 'top left',
+                  }}
+                  loading="lazy"
+                  title={`Instagram ${post.type}`}
+                />
+              </div>
               {/* Hover overlay */}
               <div style={{
                 position: 'absolute', inset: 0, zIndex: 2,

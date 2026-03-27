@@ -17,6 +17,10 @@ import { AdminOrdenes } from './pages/admin/AdminOrdenes';
 import { AdminConfiguracion } from './pages/admin/AdminConfiguracion';
 import { AdminMarcas } from './pages/admin/AdminMarcas';
 import { AdminSocial } from './pages/admin/AdminSocial';
+import { AdminNavegacion } from './pages/admin/AdminNavegacion';
+import { AdminBlog } from './pages/admin/AdminBlog';
+import { BlogPage } from './pages/BlogPage';
+import { BlogPostPage } from './pages/BlogPostPage';
 
 function PublicLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -44,6 +48,8 @@ export default function App() {
       <Route path="/marcas" element={<PublicLayout><BrandsPage /></PublicLayout>} />
       <Route path="/marcas/:slug" element={<PublicLayout><BrandPage /></PublicLayout>} />
       <Route path="/cuenta" element={<PublicLayout><AccountPage /></PublicLayout>} />
+      <Route path="/blog" element={<PublicLayout><BlogPage /></PublicLayout>} />
+      <Route path="/blog/:slug" element={<PublicLayout><BlogPostPage /></PublicLayout>} />
 
       {/* Admin routes */}
       <Route path="/admin" element={<AdminLayout />}>
@@ -52,6 +58,8 @@ export default function App() {
         <Route path="marcas"        element={<AdminMarcas />} />
         <Route path="ordenes"       element={<AdminOrdenes />} />
         <Route path="social"        element={<AdminSocial />} />
+        <Route path="navegacion"   element={<AdminNavegacion />} />
+        <Route path="blog"         element={<AdminBlog />} />
         <Route path="configuracion" element={<AdminConfiguracion />} />
       </Route>
 
