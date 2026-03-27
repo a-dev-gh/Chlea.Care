@@ -29,7 +29,11 @@ export function BrandsCarousel() {
               to={`/marcas/${brand.slug}`}
               className="brand-pill"
             >
-              <span className="brand-pill-initial">{brand.name.charAt(0)}</span>
+              {brand.logo ? (
+                <img src={brand.logo} alt={brand.name} className="brand-pill-logo" />
+              ) : (
+                <span className="brand-pill-initial">{brand.name.charAt(0)}</span>
+              )}
               <span className="brand-pill-name">{brand.name}</span>
             </Link>
           ))}
@@ -45,7 +49,11 @@ export function BrandsCarousel() {
               to={`/marcas/${brand.slug}`}
               className="brand-pill"
             >
-              <span className="brand-pill-initial">{brand.name.charAt(0)}</span>
+              {brand.logo ? (
+                <img src={brand.logo} alt={brand.name} className="brand-pill-logo" />
+              ) : (
+                <span className="brand-pill-initial">{brand.name.charAt(0)}</span>
+              )}
               <span className="brand-pill-name">{brand.name}</span>
             </Link>
           ))}
@@ -82,10 +90,10 @@ export function BrandsCarousel() {
         }
 
         .marquee-left {
-          animation: marqueeLeft 45s linear infinite;
+          animation: marqueeLeft 90s linear infinite;
         }
         .marquee-right {
-          animation: marqueeRight 50s linear infinite;
+          animation: marqueeRight 100s linear infinite;
         }
 
         .marquee-track:hover .marquee-strip {
@@ -121,6 +129,14 @@ export function BrandsCarousel() {
           transform: translateY(-4px) scale(1.05);
           box-shadow: 0 8px 24px rgba(235, 25, 130, 0.15);
           background: #fff5f9;
+        }
+
+        .brand-pill-logo {
+          height: 28px;
+          width: auto;
+          max-width: 80px;
+          object-fit: contain;
+          flex-shrink: 0;
         }
 
         .brand-pill-initial {

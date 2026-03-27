@@ -390,7 +390,7 @@ export function HomePage() {
           </h2>
         </div>
 
-        {/* Full-width grid — edge to edge, only posts with URLs */}
+        {/* Full-width grid — edge to edge, equal height, only posts with URLs */}
         <div style={{
           display: 'grid',
           gridTemplateColumns: `repeat(${INSTAGRAM_POSTS.filter(p => p.url).length}, 1fr)`,
@@ -402,8 +402,7 @@ export function HomePage() {
               onClick={() => setIgModal({ url: post.url, type: post.type })}
               style={{
                 display: 'block',
-                aspectRatio: post.type === 'reel' ? '9/16' : '1/1',
-                maxHeight: 500,
+                aspectRatio: '4/5',
                 overflow: 'hidden',
                 position: 'relative',
                 border: 'none',
@@ -412,31 +411,21 @@ export function HomePage() {
                 background: post.placeholder,
               }}
             >
-              {/* Instagram embed — scaled up so image fills the card */}
-              <div style={{
-                position: 'absolute',
-                top: 0, left: 0,
-                width: '100%',
-                height: '100%',
-                overflow: 'hidden',
-              }}>
-                <iframe
-                  src={getEmbedUrl(post.url)}
-                  style={{
-                    position: 'absolute',
-                    top: '-60px',
-                    left: '-1px',
-                    width: 'calc(100% + 2px)',
-                    height: 'calc(100% + 120px)',
-                    border: 'none',
-                    pointerEvents: 'none',
-                    transform: 'scale(1)',
-                    transformOrigin: 'top left',
-                  }}
-                  loading="lazy"
-                  title={`Instagram ${post.type}`}
-                />
-              </div>
+              {/* Instagram embed iframe — offset to hide IG chrome, show content */}
+              <iframe
+                src={getEmbedUrl(post.url)}
+                style={{
+                  position: 'absolute',
+                  top: '-54px',
+                  left: 0,
+                  width: '100%',
+                  height: 'calc(100% + 140px)',
+                  border: 'none',
+                  pointerEvents: 'none',
+                }}
+                loading="lazy"
+                title={`Instagram ${post.type}`}
+              />
               {/* Hover overlay */}
               <div style={{
                 position: 'absolute', inset: 0, zIndex: 2,

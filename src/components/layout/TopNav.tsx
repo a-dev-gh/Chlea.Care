@@ -15,7 +15,6 @@ const MENU_LINKS = [
   { label: 'Catálogo', href: '/catalogo' },
   { label: 'Marcas', href: '/marcas', expandable: true },
   { label: 'Hombres', href: '/hombres' },
-  { label: 'Mi Cuenta', href: '/cuenta' },
 ];
 
 export function TopNav() {
@@ -24,6 +23,10 @@ export function TopNav() {
   const [searchCat, setSearchCat] = useState('');
   const [menuOpen, setMenuOpen] = useState(false);
   const [brandsExpanded, setBrandsExpanded] = useState(false);
+  const [brandsPage, setBrandsPage] = useState(0);
+  const BRANDS_PER_PAGE = 5;
+  const totalBrandPages = Math.ceil(SEED_BRANDS.length / BRANDS_PER_PAGE);
+  const visibleBrands = SEED_BRANDS.slice(brandsPage * BRANDS_PER_PAGE, (brandsPage + 1) * BRANDS_PER_PAGE);
   const navigate = useNavigate();
   const cartCount = useCart(s => s.count());
   const openCart = useCart(s => s.openCart);
@@ -159,7 +162,7 @@ export function TopNav() {
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               width: 40, height: 40, borderRadius: '50%',
               background: 'none', border: 'none', cursor: 'pointer',
-              color: 'var(--deep)', transition: 'background 0.2s',
+              color: 'var(--hot)', transition: 'background 0.2s',
             }}
           >
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
@@ -177,7 +180,7 @@ export function TopNav() {
             style={{
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               width: 40, height: 40, borderRadius: '50%',
-              color: 'var(--deep)', transition: 'background 0.2s, color 0.2s',
+              color: 'var(--hot)', transition: 'background 0.2s, color 0.2s',
               textDecoration: 'none',
             }}
           >
@@ -194,7 +197,7 @@ export function TopNav() {
             style={{
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               width: 40, height: 40, borderRadius: '50%',
-              color: 'var(--deep)', transition: 'background 0.2s, color 0.2s',
+              color: 'var(--hot)', transition: 'background 0.2s, color 0.2s',
               textDecoration: 'none',
             }}
           >
@@ -214,10 +217,10 @@ export function TopNav() {
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               width: 40, height: 40, borderRadius: '50%',
               background: 'none', border: 'none', cursor: 'pointer',
-              color: 'var(--deep)', transition: 'background 0.2s',
+              color: 'var(--hot)', transition: 'background 0.2s',
             }}
           >
-            <CartIcon size={24} color="var(--deep)" />
+            <CartIcon size={24} color="var(--hot)" />
             {cartCount > 0 && (
               <span style={{
                 position: 'absolute', top: 2, right: 2,
@@ -273,12 +276,14 @@ export function TopNav() {
               display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between',
             }}>
               <div>
-                <img src="/chlea-care-logo.svg" alt="Chlea Care" style={{ height: 44, marginBottom: 6 }} />
+                <img src="/chlea-care-logo.svg" alt="Chlea Care" style={{ height: 64, display: 'block' }} />
                 <p style={{
-                  fontSize: 11, fontStyle: 'italic',
+                  fontSize: 12, fontStyle: 'italic',
                   color: 'var(--text-muted)',
                   fontFamily: 'var(--font-display)',
                   letterSpacing: 0.3,
+                  marginTop: -6,
+                  paddingLeft: 4,
                 }}>
                   By Denisee Ventura
                 </p>
@@ -341,7 +346,7 @@ export function TopNav() {
                         transition: 'max-height 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
                         background: 'var(--cream)',
                       }}>
-                        {SEED_BRANDS.map(brand => (
+                        {visibleBrands.map(brand => (
                           <Link
                             key={brand.slug}
                             to={`/marcas/${brand.slug}`}
@@ -360,12 +365,51 @@ export function TopNav() {
                             {brand.name}
                           </Link>
                         ))}
+                        {/* Pagination arrows */}
+                        {totalBrandPages > 1 && (
+                          <div style={{
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            gap: 16, padding: '10px 32px',
+                          }}>
+                            <button
+                              onClick={() => setBrandsPage(p => Math.max(0, p - 1))}
+                              disabled={brandsPage === 0}
+                              style={{
+                                background: 'none', border: 'none', cursor: brandsPage === 0 ? 'default' : 'pointer',
+                                color: brandsPage === 0 ? 'var(--border2)' : 'var(--hot)',
+                                padding: 4, display: 'flex',
+                                transition: 'color 0.2s',
+                              }}
+                            >
+                              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                                <polyline points="15 18 9 12 15 6"/>
+                              </svg>
+                            </button>
+                            <span style={{ fontSize: 12, color: 'var(--text-muted)', fontWeight: 600 }}>
+                              {brandsPage + 1} / {totalBrandPages}
+                            </span>
+                            <button
+                              onClick={() => setBrandsPage(p => Math.min(totalBrandPages - 1, p + 1))}
+                              disabled={brandsPage === totalBrandPages - 1}
+                              style={{
+                                background: 'none', border: 'none', cursor: brandsPage === totalBrandPages - 1 ? 'default' : 'pointer',
+                                color: brandsPage === totalBrandPages - 1 ? 'var(--border2)' : 'var(--hot)',
+                                padding: 4, display: 'flex',
+                                transition: 'color 0.2s',
+                              }}
+                            >
+                              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                                <polyline points="9 18 15 12 9 6"/>
+                              </svg>
+                            </button>
+                          </div>
+                        )}
                         <Link
                           to="/marcas"
                           onClick={() => setMenuOpen(false)}
                           style={{
                             display: 'block',
-                            padding: '11px 32px 14px 48px',
+                            padding: '6px 32px 14px 48px',
                             fontSize: 13, fontWeight: 700,
                             color: 'var(--hot)',
                             textDecoration: 'none',
@@ -398,15 +442,61 @@ export function TopNav() {
                 </div>
               ))}
 
-              {/* Cart link in menu */}
-              <div style={{ borderTop: '1px solid var(--border)', margin: '8px 24px 0', paddingTop: 8 }}>
+              {/* Mis Listas, Mi Perfil, Carrito */}
+              <div style={{ borderTop: '1px solid var(--border)', margin: '8px 0 0', paddingTop: 8 }}>
+                {/* Mis Listas */}
+                <Link
+                  to="/catalogo?filtro=favoritos"
+                  onClick={() => setMenuOpen(false)}
+                  className="menu-link"
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: 12,
+                    padding: '14px 32px',
+                    fontSize: 16, fontWeight: 500,
+                    color: 'var(--text)',
+                    fontFamily: 'var(--font-body)',
+                    textDecoration: 'none',
+                    position: 'relative',
+                    transition: 'color 0.2s',
+                  }}
+                >
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--hot)" strokeWidth="2">
+                    <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78L12 21.23l8.84-8.84a5.5 5.5 0 0 0 0-7.78z"/>
+                  </svg>
+                  Mis Listas
+                </Link>
+
+                {/* Mi Perfil */}
+                <Link
+                  to="/cuenta"
+                  onClick={() => setMenuOpen(false)}
+                  className="menu-link"
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: 12,
+                    padding: '14px 32px',
+                    fontSize: 16, fontWeight: 500,
+                    color: 'var(--text)',
+                    fontFamily: 'var(--font-body)',
+                    textDecoration: 'none',
+                    position: 'relative',
+                    transition: 'color 0.2s',
+                  }}
+                >
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--hot)" strokeWidth="2">
+                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                    <circle cx="12" cy="7" r="4"/>
+                  </svg>
+                  Mi Perfil
+                </Link>
+
+                {/* Carrito */}
                 <button
                   onClick={() => { setMenuOpen(false); openCart(); }}
                   className="menu-link"
                   style={{
                     display: 'flex', alignItems: 'center', gap: 12,
                     width: '100%',
-                    padding: '16px 32px',
+                    padding: '14px 32px',
                     fontSize: 16, fontWeight: 500,
                     color: 'var(--text)',
                     fontFamily: 'var(--font-body)',
