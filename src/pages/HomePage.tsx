@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { useSiteSettings } from '../hooks/useSiteSettings';
 import { ProductGrid } from '../components/product/ProductGrid';
@@ -20,57 +20,121 @@ export function HomePage() {
   const [menOpen, setMenOpen] = useState(false);
   const [igModal, setIgModal] = useState<{ url: string; type: 'post' | 'reel' } | null>(null);
 
+  // ── Rotating Hero Slides ──
+  const HERO_SLIDES = [
+    {
+      label: '✦ Envíos a todo el país',
+      heading: 'Envíos a todo el país\nen 24 horas',
+      sub: 'Tu pedido sale hoy y llega mañana. Eficiencia, responsabilidad y cuidado en cada entrega — porque tu tiempo importa tanto como tu belleza.',
+      image: '/map-landing.webp',
+      layout: 'image-left' as const,   // image left, text right
+    },
+    {
+      label: '✦ Glow diferente',
+      heading: 'Glow diferente,\nGlow Chlea',
+      sub: settings.hero_sub,
+      image: '/landing-photo.webp',
+      layout: 'text-left' as const,    // text left, image right (original)
+    },
+    {
+      label: '✦ Calidad profesional',
+      heading: 'Productos profesionales\nque no te defraudarán',
+      sub: 'Marcas de confianza, fórmulas que cumplen. Cada producto en nuestra tienda ha sido seleccionado por Denisee para garantizar resultados reales.',
+      image: '/products-landing.webp',
+      layout: 'image-left' as const,   // image left, text right
+    },
+  ];
+
+  const [heroSlide, setHeroSlide] = useState(0);
+  const [heroAnimating, setHeroAnimating] = useState(false);
+
+  const goToSlide = useCallback((idx: number) => {
+    setHeroAnimating(true);
+    setTimeout(() => {
+      setHeroSlide(idx);
+      setHeroAnimating(false);
+    }, 400);
+  }, []);
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      goToSlide((heroSlide + 1) % HERO_SLIDES.length);
+    }, 6000);
+    return () => clearInterval(timer);
+  }, [heroSlide, goToSlide, HERO_SLIDES.length]);
+
+  const slide = HERO_SLIDES[heroSlide];
+  const isImageLeft = slide.layout === 'image-left';
+
   return (
     <div>
-      {/* ── Hero ── */}
+      {/* ── Hero — Rotating 3-slide ── */}
       <section style={{
         background: 'linear-gradient(160deg,#fff0f5 0%,#fff5f9 50%,var(--white) 100%)',
-        padding: '72px 24px 80px',
+        padding: '60px 24px 72px',
         overflow: 'hidden',
+        position: 'relative',
+        minHeight: 520,
       }}>
         <div style={{
           maxWidth: 1280, margin: '0 auto',
           display: 'grid',
-          gridTemplateColumns: '45% 55%',
+          gridTemplateColumns: '48% 48%',
           gap: 48, alignItems: 'center',
+          direction: isImageLeft ? 'rtl' : 'ltr',
         }} className="hero-grid">
-          {/* Text */}
-          <div className="animate-slide-up">
-            <p className="section-label" style={{ marginBottom: 16 }}>✦ Nueva colección 2025</p>
+          {/* Text side */}
+          <div style={{
+            direction: 'ltr',
+            opacity: heroAnimating ? 0 : 1,
+            transform: heroAnimating ? 'translateY(24px)' : 'translateY(0)',
+            transition: 'opacity 0.5s ease, transform 0.5s ease',
+          }}>
+            <p className="section-label" style={{ marginBottom: 16 }}>{slide.label}</p>
             <h1 style={{
               fontFamily: 'var(--font-display)',
-              fontSize: 'clamp(2.4rem, 6vw, 4.4rem)',
+              fontSize: 'clamp(2.2rem, 5.5vw, 4rem)',
               fontWeight: 300,
               lineHeight: 1.1,
               color: 'var(--text)',
               marginBottom: 20,
+              whiteSpace: 'pre-line',
             }}>
-              {settings.hero_tagline.split(',')[0]},<br />
-              <em style={{ background: 'linear-gradient(90deg,var(--hot),#ff6b9d)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
-                {settings.hero_tagline.split(',')[1]?.trim() || 'Glow Chlea'}
-              </em>
+              {slide.heading.split('\n').map((line, i) => (
+                <span key={i}>
+                  {i === 1 ? (
+                    <em style={{ background: 'linear-gradient(90deg,var(--hot),#ff6b9d)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+                      {line}
+                    </em>
+                  ) : line}
+                  {i === 0 && <br />}
+                </span>
+              ))}
             </h1>
-            <p style={{ fontSize: 16, color: 'var(--text-soft)', maxWidth: 420, lineHeight: 1.7, marginBottom: 36 }}>
-              {settings.hero_sub}
+            <p style={{ fontSize: 16, color: 'var(--text-soft)', maxWidth: 440, lineHeight: 1.7, marginBottom: 36 }}>
+              {slide.sub}
             </p>
+
+            {/* CTA — glassmorphic with mana glow */}
             <div className="hero-cta-wrap" style={{ position: 'relative', display: 'inline-block' }}>
-              {/* Pulsing aura rings */}
-              <div className="cta-aura cta-aura-1" />
-              <div className="cta-aura cta-aura-2" />
+              <div className="cta-mana cta-mana-1" />
+              <div className="cta-mana cta-mana-2" />
+              <div className="cta-mana cta-mana-3" />
               <Link to="/catalogo" className="hero-cta" style={{
                 display: 'inline-flex', alignItems: 'center', gap: 10,
-                background: 'rgba(235,25,130,0.75)',
-                backdropFilter: 'blur(16px)',
-                WebkitBackdropFilter: 'blur(16px)',
+                background: 'rgba(235,25,130,0.72)',
+                backdropFilter: 'blur(20px)',
+                WebkitBackdropFilter: 'blur(20px)',
                 color: '#fff',
                 borderRadius: 'var(--r-pill)', padding: '16px 38px',
                 fontSize: 16, fontWeight: 600, fontFamily: 'var(--font-body)',
                 textDecoration: 'none',
-                border: '1px solid rgba(255,255,255,0.25)',
-                boxShadow: '0 4px 30px rgba(235,25,130,0.35), inset 0 1px 0 rgba(255,255,255,0.2)',
+                border: '1px solid rgba(255,255,255,0.3)',
+                boxShadow: '0 0 20px rgba(235,25,130,0.4), 0 0 60px rgba(235,25,130,0.15), inset 0 1px 0 rgba(255,255,255,0.2)',
                 transition: 'all 0.3s cubic-bezier(0.34,1.56,0.64,1)',
                 position: 'relative',
                 overflow: 'hidden',
+                zIndex: 1,
               }}>
                 <span style={{ position: 'relative', zIndex: 1 }}>Ver catálogo</span>
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" style={{ position: 'relative', zIndex: 1, transition: 'transform 0.3s' }}>
@@ -80,60 +144,104 @@ export function HomePage() {
             </div>
           </div>
 
-          {/* Hero image */}
+          {/* Image side */}
           <div style={{
+            direction: 'ltr',
             aspectRatio: '4/5',
             borderRadius: 'var(--r-lg)',
             overflow: 'hidden',
             boxShadow: 'var(--shadow-md)',
+            opacity: heroAnimating ? 0 : 1,
+            transform: heroAnimating ? (isImageLeft ? 'translateX(-30px)' : 'translateX(30px)') : 'translateX(0)',
+            transition: 'opacity 0.5s ease, transform 0.6s ease',
           }} className="hero-img">
             <img
-              src="/landing-photo.webp"
-              alt="Chlea Care"
+              src={slide.image}
+              alt={slide.heading}
               style={{ width: '100%', height: '100%', objectFit: 'cover' }}
             />
           </div>
         </div>
 
+        {/* Slide indicators */}
+        <div style={{
+          display: 'flex', gap: 10, justifyContent: 'center',
+          marginTop: 36,
+        }}>
+          {HERO_SLIDES.map((_, i) => (
+            <button
+              key={i}
+              onClick={() => goToSlide(i)}
+              style={{
+                width: heroSlide === i ? 32 : 10,
+                height: 10,
+                borderRadius: 'var(--r-pill)',
+                background: heroSlide === i ? 'var(--hot)' : 'var(--border2)',
+                border: 'none',
+                cursor: 'pointer',
+                transition: 'all 0.35s cubic-bezier(0.34, 1.56, 0.64, 1)',
+                opacity: heroSlide === i ? 1 : 0.5,
+              }}
+            />
+          ))}
+        </div>
+
         <style>{`
           .hero-cta:hover {
             transform: translateY(-3px) scale(1.04);
-            box-shadow: 0 8px 40px rgba(235,25,130,0.5), inset 0 1px 0 rgba(255,255,255,0.3);
-            background: rgba(235,25,130,0.88);
+            box-shadow: 0 0 30px rgba(235,25,130,0.55), 0 0 80px rgba(235,25,130,0.2), inset 0 1px 0 rgba(255,255,255,0.3) !important;
+            background: rgba(235,25,130,0.88) !important;
           }
           .hero-cta:hover svg { transform: translateX(4px); }
           .hero-cta::after {
             content: '';
             position: absolute;
             inset: 0;
-            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.18), transparent);
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
             transform: translateX(-100%);
             transition: transform 0.6s;
           }
           .hero-cta:hover::after { transform: translateX(100%); }
 
-          /* Pulsing aura */
-          .cta-aura {
+          /* Mana glow — pulsating hot pink energy rings */
+          .cta-mana {
             position: absolute;
-            inset: -6px;
+            inset: -8px;
             border-radius: var(--r-pill);
-            border: 2px solid rgba(235,25,130,0.25);
             pointer-events: none;
+            z-index: 0;
           }
-          .cta-aura-1 {
-            animation: ctaPulse 2.5s ease-in-out infinite;
+          .cta-mana-1 {
+            background: radial-gradient(ellipse at center, rgba(235,25,130,0.25) 0%, transparent 70%);
+            animation: manaGlow 3s ease-in-out infinite;
           }
-          .cta-aura-2 {
-            animation: ctaPulse 2.5s ease-in-out infinite 1.25s;
+          .cta-mana-2 {
+            inset: -14px;
+            border: 1.5px solid rgba(235,25,130,0.2);
+            animation: manaRing 2.5s ease-in-out infinite;
           }
-          @keyframes ctaPulse {
-            0%   { opacity: 0.7; transform: scale(1);   }
-            50%  { opacity: 0;   transform: scale(1.18); }
-            100% { opacity: 0;   transform: scale(1.18); }
+          .cta-mana-3 {
+            inset: -22px;
+            border: 1px solid rgba(235,25,130,0.1);
+            animation: manaRing 2.5s ease-in-out infinite 1.25s;
           }
+
+          @keyframes manaGlow {
+            0%, 100% { opacity: 0.6; transform: scale(1); }
+            50%      { opacity: 1;   transform: scale(1.08); }
+          }
+          @keyframes manaRing {
+            0%   { opacity: 0.7; transform: scale(1); }
+            60%  { opacity: 0;   transform: scale(1.25); }
+            100% { opacity: 0;   transform: scale(1.25); }
+          }
+
           @media (max-width: 900px) {
-            .hero-grid { grid-template-columns: 1fr !important; }
-            .hero-img { aspect-ratio: 3/2 !important; font-size: 60px !important; }
+            .hero-grid {
+              grid-template-columns: 1fr !important;
+              direction: ltr !important;
+            }
+            .hero-img { aspect-ratio: 3/2 !important; }
           }
         `}</style>
       </section>
@@ -414,6 +522,7 @@ export function HomePage() {
               {/* Instagram embed iframe — offset to hide IG chrome, show content */}
               <iframe
                 src={getEmbedUrl(post.url)}
+                scrolling="no"
                 style={{
                   position: 'absolute',
                   top: '-54px',
@@ -422,6 +531,7 @@ export function HomePage() {
                   height: 'calc(100% + 140px)',
                   border: 'none',
                   pointerEvents: 'none',
+                  overflow: 'hidden',
                 }}
                 loading="lazy"
                 title={`Instagram ${post.type}`}

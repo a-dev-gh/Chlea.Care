@@ -169,7 +169,7 @@ export const SEED_BRANDS = [
   { name: 'OGX',               slug: 'ogx',               tagline: 'Belleza inspirada en la naturaleza',        logo: '/brand logos/ogx-logo.webp' },
   { name: 'Got2b Glued',       slug: 'got2b-glued',       tagline: 'Fijación de alto impacto',                  logo: '/brand logos/got2b-logo.webp' },
   { name: 'Tree Hut',          slug: 'tree-hut',          tagline: 'Body care natural y delicioso',             logo: '/brand logos/treehut-logo.webp' },
-  { name: 'Skala Expert',      slug: 'skala-expert',      tagline: 'Cuidado capilar accesible' },
+  { name: 'Skala Expert',      slug: 'skala-expert',      tagline: 'Cuidado capilar accesible',                logo: '/brand logos/skala-logo.webp' },
   { name: 'Endoten Control',   slug: 'endoten-control',   tagline: 'Control capilar profesional',               logo: '/brand logos/logo-endoten-black.webp' },
   { name: 'The Ordinary',      slug: 'the-ordinary',      tagline: 'Skincare clínico sin complicaciones',       logo: '/brand logos/the-ordinary-logo.webp' },
   { name: 'Dove',              slug: 'dove',              tagline: 'Belleza real, cuidado real',                 logo: '/brand logos/dove-logo.webp' },

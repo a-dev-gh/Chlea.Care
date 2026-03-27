@@ -28,13 +28,13 @@ export function BrandsCarousel() {
               key={`r1-${i}`}
               to={`/marcas/${brand.slug}`}
               className="brand-pill"
+              title={brand.name}
             >
               {brand.logo ? (
                 <img src={brand.logo} alt={brand.name} className="brand-pill-logo" />
               ) : (
                 <span className="brand-pill-initial">{brand.name.charAt(0)}</span>
               )}
-              <span className="brand-pill-name">{brand.name}</span>
             </Link>
           ))}
         </div>
@@ -48,13 +48,13 @@ export function BrandsCarousel() {
               key={`r2-${i}`}
               to={`/marcas/${brand.slug}`}
               className="brand-pill"
+              title={brand.name}
             >
               {brand.logo ? (
                 <img src={brand.logo} alt={brand.name} className="brand-pill-logo" />
               ) : (
                 <span className="brand-pill-initial">{brand.name.charAt(0)}</span>
               )}
-              <span className="brand-pill-name">{brand.name}</span>
             </Link>
           ))}
         </div>
@@ -84,7 +84,7 @@ export function BrandsCarousel() {
 
         .marquee-strip {
           display: flex;
-          gap: 16px;
+          gap: 20px;
           width: max-content;
           will-change: transform;
         }
@@ -112,36 +112,38 @@ export function BrandsCarousel() {
         .brand-pill {
           display: inline-flex;
           align-items: center;
-          gap: 10px;
-          padding: 12px 24px;
-          background: var(--white);
-          border: 1.5px solid var(--border);
+          justify-content: center;
+          padding: 18px 32px;
+          background: rgba(255, 255, 255, 0.55);
+          backdrop-filter: blur(12px);
+          -webkit-backdrop-filter: blur(12px);
+          border: 1px solid rgba(255, 255, 255, 0.7);
           border-radius: var(--r-pill);
           text-decoration: none;
-          white-space: nowrap;
           flex-shrink: 0;
           transition: all 0.28s cubic-bezier(0.34, 1.56, 0.64, 1);
           cursor: pointer;
+          box-shadow: 0 2px 12px rgba(235, 25, 130, 0.06);
         }
 
         .brand-pill:hover {
-          border-color: var(--hot);
-          transform: translateY(-4px) scale(1.05);
-          box-shadow: 0 8px 24px rgba(235, 25, 130, 0.15);
-          background: #fff5f9;
+          border-color: rgba(235, 25, 130, 0.3);
+          transform: translateY(-4px) scale(1.08);
+          box-shadow: 0 8px 28px rgba(235, 25, 130, 0.15);
+          background: rgba(255, 245, 249, 0.75);
         }
 
         .brand-pill-logo {
-          height: 28px;
+          height: 56px;
           width: auto;
-          max-width: 80px;
+          max-width: 160px;
           object-fit: contain;
           flex-shrink: 0;
         }
 
         .brand-pill-initial {
-          width: 32px;
-          height: 32px;
+          width: 56px;
+          height: 56px;
           border-radius: 50%;
           background: linear-gradient(135deg, var(--hot), #ff6b9d);
           color: #fff;
@@ -149,36 +151,24 @@ export function BrandsCarousel() {
           align-items: center;
           justify-content: center;
           font-family: var(--font-display);
-          font-size: 15px;
+          font-size: 22px;
           font-weight: 600;
           font-style: italic;
           flex-shrink: 0;
         }
 
-        .brand-pill-name {
-          font-family: var(--font-body);
-          font-size: 14px;
-          font-weight: 600;
-          color: var(--text);
-          letter-spacing: 0.3px;
-        }
-
-        .brand-pill:hover .brand-pill-name {
-          color: var(--hot);
-        }
-
         @media (max-width: 600px) {
           .brand-pill {
-            padding: 10px 18px;
-            gap: 8px;
+            padding: 14px 24px;
+          }
+          .brand-pill-logo {
+            height: 42px;
+            max-width: 120px;
           }
           .brand-pill-initial {
-            width: 28px;
-            height: 28px;
-            font-size: 13px;
-          }
-          .brand-pill-name {
-            font-size: 13px;
+            width: 42px;
+            height: 42px;
+            font-size: 18px;
           }
         }
       `}</style>
