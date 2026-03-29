@@ -2,7 +2,10 @@ import { useState, useRef, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useCart } from '../../hooks/useCart';
 import { CartIcon } from '../ui/CartIcon';
-import { SEED_CATEGORIES, SEED_BRANDS } from '../../data/seedData';
+import { SEED_CATEGORIES, SEED_BRANDS, SEED_PRODUCTS } from '../../data/seedData';
+import { getBrandsForCategory, getCategoriesWithBrands } from '../../utils/brandFilters';
+import { useSiteSettings } from '../../hooks/useSiteSettings';
+import { formatPrice } from '../../utils/formatPrice';
 
 const SEARCH_CATEGORIES = [
   { label: 'Todo', slug: '' },
@@ -18,15 +21,44 @@ const MENU_LINKS = [
 ];
 
 export function TopNav() {
+  const settings = useSiteSettings();
   const [search, setSearch] = useState('');
   const [searchFocused, setSearchFocused] = useState(false);
   const [searchCat, setSearchCat] = useState('');
+  const [searchMinPrice, setSearchMinPrice] = useState('');
+  const [searchMaxPrice, setSearchMaxPrice] = useState('');
+  const [searchLabels, setSearchLabels] = useState<Record<string, string[]>>({});
+
+  // Featured label groups from admin settings
+  const featuredLabelNames = (settings.search_featured_labels || '').split(',').map(s => s.trim()).filter(Boolean);
+  const showPriceFilter = settings.search_price_filter !== 'false';
+
+  // Collect available values for featured label groups
+  const featuredLabelGroups = featuredLabelNames.map(name => {
+    const values = new Set<string>();
+    for (const p of SEED_PRODUCTS) {
+      if (!p.is_visible || !p.labels?.[name]) continue;
+      for (const v of p.labels[name]) values.add(v);
+    }
+    return { name, values: [...values].sort() };
+  }).filter(g => g.values.length > 0);
   const [menuOpen, setMenuOpen] = useState(false);
   const [brandsExpanded, setBrandsExpanded] = useState(false);
   const [brandsPage, setBrandsPage] = useState(0);
+  const [brandsCategoryTab, setBrandsCategoryTab] = useState('');
   const BRANDS_PER_PAGE = 5;
-  const totalBrandPages = Math.ceil(SEED_BRANDS.length / BRANDS_PER_PAGE);
-  const visibleBrands = SEED_BRANDS.slice(brandsPage * BRANDS_PER_PAGE, (brandsPage + 1) * BRANDS_PER_PAGE);
+
+  // Categories that actually have brands with products
+  const catsWithBrands = getCategoriesWithBrands(SEED_PRODUCTS);
+  const brandCatTabs = SEED_CATEGORIES.filter(c => catsWithBrands.includes(c.slug));
+
+  // Auto-select first available tab
+  const activeBrandTab = brandsCategoryTab || (brandCatTabs[0]?.slug || '');
+  const brandsInTab = activeBrandTab
+    ? getBrandsForCategory(activeBrandTab, SEED_PRODUCTS, SEED_BRANDS).filter(b => b.logo)
+    : [];
+  const totalBrandPages = Math.ceil(brandsInTab.length / BRANDS_PER_PAGE);
+  const visibleBrands = brandsInTab.slice(brandsPage * BRANDS_PER_PAGE, (brandsPage + 1) * BRANDS_PER_PAGE);
   const navigate = useNavigate();
   const cartCount = useCart(s => s.count());
   const openCart = useCart(s => s.openCart);
@@ -58,8 +90,24 @@ export function TopNav() {
     const params = new URLSearchParams();
     if (search.trim()) params.set('q', search.trim());
     if (searchCat) params.set('categoria', searchCat);
+    if (searchMinPrice) params.set('min', searchMinPrice);
+    if (searchMaxPrice) params.set('max', searchMaxPrice);
+    // Add label filters
+    for (const [group, values] of Object.entries(searchLabels)) {
+      if (values.length > 0) params.set(`label_${group.replace(/\s/g, '_')}`, values.join(','));
+    }
     navigate(`/catalogo?${params.toString()}`);
     setSearchFocused(false);
+  }
+
+  function toggleSearchLabel(group: string, value: string) {
+    setSearchLabels(prev => {
+      const current = prev[group] || [];
+      const next = current.includes(value)
+        ? current.filter(v => v !== value)
+        : [...current, value];
+      return { ...prev, [group]: next };
+    });
   }
 
   return (
@@ -85,14 +133,15 @@ export function TopNav() {
           />
         </Link>
 
-        {/* Search with category dropdown */}
-        <div ref={searchRef} style={{ flex: 1, maxWidth: 520, margin: '0 auto', position: 'relative' }}>
+        {/* Search — full bar on desktop, icon-toggle on mobile */}
+        <div ref={searchRef} className="nav-search-wrap" style={{ flex: 1, maxWidth: 520, margin: '0 auto', position: 'relative' }}>
           <form onSubmit={handleSearch} style={{ position: 'relative' }}>
             <input
               value={search}
               onChange={e => setSearch(e.target.value)}
               onFocus={() => setSearchFocused(true)}
               placeholder="Buscar productos..."
+              className="nav-search-input"
               style={{
                 width: '100%',
                 padding: '10px 16px 10px 44px',
@@ -114,7 +163,7 @@ export function TopNav() {
 
           {/* Search dropdown — category quick filters */}
           {searchFocused && (
-            <div style={{
+            <div className="nav-search-dropdown" style={{
               position: 'absolute', top: 'calc(100% + 6px)', left: 0, right: 0,
               background: 'var(--white)',
               border: '1.5px solid var(--border2)',
@@ -122,10 +171,25 @@ export function TopNav() {
               boxShadow: 'var(--shadow-lg)',
               padding: '12px',
               zIndex: 10,
+              maxHeight: 400,
+              overflowY: 'auto',
             }}>
-              <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: 1.5, textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: 10, padding: '0 4px' }}>
-                Buscar en
-              </p>
+              {/* Close button */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+                <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: 1.5, textTransform: 'uppercase', color: 'var(--text-muted)', margin: 0, padding: '0 4px' }}>
+                  Buscar en
+                </p>
+                <button
+                  onClick={() => setSearchFocused(false)}
+                  style={{
+                    background: 'none', border: 'none', cursor: 'pointer',
+                    color: 'var(--hot)', fontSize: 18, fontWeight: 700,
+                    padding: '0 4px', lineHeight: 1,
+                  }}
+                >
+                  ✕
+                </button>
+              </div>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
                 {SEARCH_CATEGORIES.map(cat => (
                   <button
@@ -147,12 +211,89 @@ export function TopNav() {
                   </button>
                 ))}
               </div>
+
+              {/* Price range filter */}
+              {showPriceFilter && (
+                <div style={{ marginTop: 14, borderTop: '1px solid var(--border)', paddingTop: 12 }}>
+                  <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: 1.5, textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: 8 }}>
+                    Precio
+                  </p>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 4, flex: 1 }}>
+                      <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>RD$</span>
+                      <input
+                        type="number" placeholder="Mín" step={100} min={200}
+                        value={searchMinPrice}
+                        onChange={e => setSearchMinPrice(e.target.value)}
+                        style={{
+                          width: '100%', padding: '6px 8px', fontSize: 12,
+                          border: '1.5px solid var(--border2)', borderRadius: 'var(--r-sm)',
+                          fontFamily: 'var(--font-body)', color: 'var(--text)', outline: 'none',
+                          background: 'var(--cream)',
+                        }}
+                        onFocus={e => (e.target.style.borderColor = 'var(--hot)')}
+                        onBlur={e => (e.target.style.borderColor = 'var(--border2)')}
+                      />
+                    </div>
+                    <span style={{ color: 'var(--text-muted)', fontSize: 12 }}>—</span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 4, flex: 1 }}>
+                      <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>RD$</span>
+                      <input
+                        type="number" placeholder="Máx" step={100} max={5000}
+                        value={searchMaxPrice}
+                        onChange={e => setSearchMaxPrice(e.target.value)}
+                        style={{
+                          width: '100%', padding: '6px 8px', fontSize: 12,
+                          border: '1.5px solid var(--border2)', borderRadius: 'var(--r-sm)',
+                          fontFamily: 'var(--font-body)', color: 'var(--text)', outline: 'none',
+                          background: 'var(--cream)',
+                        }}
+                        onFocus={e => (e.target.style.borderColor = 'var(--hot)')}
+                        onBlur={e => (e.target.style.borderColor = 'var(--border2)')}
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Featured label groups */}
+              {featuredLabelGroups.map(group => (
+                <div key={group.name} style={{ marginTop: 12, borderTop: '1px solid var(--border)', paddingTop: 10 }}>
+                  <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: 1.5, textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: 8 }}>
+                    {group.name}
+                  </p>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                    {group.values.map(value => {
+                      const selected = (searchLabels[group.name] || []).includes(value);
+                      return (
+                        <button
+                          key={value}
+                          onClick={() => toggleSearchLabel(group.name, value)}
+                          style={{
+                            padding: '5px 12px',
+                            borderRadius: 'var(--r-pill)',
+                            border: selected ? '1.5px solid var(--hot)' : '1.5px solid var(--border2)',
+                            background: selected ? 'rgba(235,25,130,0.08)' : 'var(--cream)',
+                            color: selected ? 'var(--hot)' : 'var(--text-soft)',
+                            fontSize: 12, fontWeight: 600,
+                            fontFamily: 'var(--font-body)',
+                            cursor: 'pointer',
+                            transition: 'all 0.15s',
+                          }}
+                        >
+                          {value}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))}
             </div>
           )}
         </div>
 
-        {/* Right icons */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+        {/* Right icons — pushed to edge */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0, marginLeft: 'auto' }}>
           {/* Hamburger */}
           <button
             onClick={() => setMenuOpen(true)}
@@ -172,10 +313,10 @@ export function TopNav() {
             </svg>
           </button>
 
-          {/* Heart / Mis Listas */}
+          {/* Heart / Mis Listas — desktop only, moves to BottomNav on mobile */}
           <Link
             to="/catalogo?filtro=favoritos"
-            className="nav-icon-btn"
+            className="nav-icon-btn nav-desktop-only"
             title="Mis Listas"
             style={{
               display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -189,10 +330,10 @@ export function TopNav() {
             </svg>
           </Link>
 
-          {/* Profile */}
+          {/* Profile — desktop only, moves to BottomNav on mobile */}
           <Link
             to="/cuenta"
-            className="nav-icon-btn"
+            className="nav-icon-btn nav-desktop-only"
             title="Mi cuenta"
             style={{
               display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -241,6 +382,26 @@ export function TopNav() {
           .nav-icon-btn:hover {
             background: var(--cream) !important;
             color: var(--hot) !important;
+          }
+          @media (max-width: 900px) {
+            .nav-desktop-only { display: none !important; }
+            .nav-search-wrap {
+              flex: 1 1 auto !important;
+              max-width: none !important;
+              margin: 0 4px !important;
+            }
+            .nav-search-input {
+              font-size: 13px !important;
+              padding: 8px 12px 8px 36px !important;
+            }
+            .nav-search-dropdown {
+              position: fixed !important;
+              top: 56px !important;
+              left: 12px !important;
+              right: 12px !important;
+              z-index: 200;
+              max-height: 70vh !important;
+            }
           }
         `}</style>
       </nav>
@@ -339,13 +500,42 @@ export function TopNav() {
                         </svg>
                       </button>
 
-                      {/* Expandable brand list */}
+                      {/* Expandable brand list with category tabs */}
                       <div style={{
-                        maxHeight: brandsExpanded ? 600 : 0,
+                        maxHeight: brandsExpanded ? 700 : 0,
                         overflow: 'hidden',
                         transition: 'max-height 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
                         background: 'var(--cream)',
                       }}>
+                        {/* Category tabs */}
+                        <div style={{
+                          display: 'flex', gap: 6, padding: '14px 32px 8px',
+                          flexWrap: 'wrap',
+                        }}>
+                          {brandCatTabs.map(tab => {
+                            const active = activeBrandTab === tab.slug;
+                            return (
+                              <button key={tab.slug} onClick={() => {
+                                setBrandsCategoryTab(tab.slug);
+                                setBrandsPage(0);
+                              }} style={{
+                                padding: '5px 14px',
+                                borderRadius: 'var(--r-pill)',
+                                border: 'none',
+                                background: active ? 'var(--hot)' : 'rgba(255,255,255,0.7)',
+                                color: active ? '#fff' : 'var(--text-muted)',
+                                fontSize: 12, fontWeight: 600,
+                                fontFamily: 'var(--font-body)',
+                                cursor: 'pointer',
+                                transition: 'all 0.2s',
+                              }}>
+                                {tab.name}
+                              </button>
+                            );
+                          })}
+                        </div>
+
+                        {/* Brand links */}
                         {visibleBrands.map(brand => (
                           <Link
                             key={brand.slug}
@@ -353,7 +543,7 @@ export function TopNav() {
                             onClick={() => setMenuOpen(false)}
                             className="menu-link menu-sublink"
                             style={{
-                              display: 'block',
+                              display: 'flex', alignItems: 'center', gap: 10,
                               padding: '11px 32px 11px 48px',
                               fontSize: 14, fontWeight: 400,
                               color: 'var(--text-soft)',
@@ -362,9 +552,23 @@ export function TopNav() {
                               transition: 'color 0.15s, padding-left 0.2s',
                             }}
                           >
+                            {brand.logo && (
+                              <img src={brand.logo} alt="" style={{
+                                height: 20, width: 'auto', maxWidth: 60,
+                                objectFit: 'contain', opacity: 0.7,
+                              }} />
+                            )}
                             {brand.name}
                           </Link>
                         ))}
+
+                        {/* Empty state */}
+                        {brandsInTab.length === 0 && (
+                          <p style={{ padding: '14px 48px', fontSize: 13, color: 'var(--text-muted)', fontStyle: 'italic' }}>
+                            No hay marcas en esta categoría aún.
+                          </p>
+                        )}
+
                         {/* Pagination arrows */}
                         {totalBrandPages > 1 && (
                           <div style={{
@@ -405,7 +609,7 @@ export function TopNav() {
                           </div>
                         )}
                         <Link
-                          to="/marcas"
+                          to={`/marcas${activeBrandTab ? `?categoria=${activeBrandTab}` : ''}`}
                           onClick={() => setMenuOpen(false)}
                           style={{
                             display: 'block',

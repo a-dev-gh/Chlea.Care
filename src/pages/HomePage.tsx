@@ -246,41 +246,84 @@ export function HomePage() {
         `}</style>
       </section>
 
-      {/* ── About Denisee ── */}
+      {/* ── About — Madre e Hija ── */}
       <section style={{ padding: '80px 24px', background: 'var(--white)' }}>
-        <div style={{ maxWidth: 900, margin: '0 auto', display: 'flex', gap: 48, alignItems: 'center' }} className="about-grid">
-          {/* Orb — extra large with photo */}
-          <div style={{ flexShrink: 0 }}>
-            <div style={{
-              width: 360, height: 360,
-              borderRadius: '50%',
-              overflow: 'hidden',
-              boxShadow: '0 0 0 8px var(--pink), 0 16px 60px rgba(235,25,130,0.22)',
-              animation: 'pulse-ring 2.5s infinite',
-            }}>
-              <img
-                src="/about-photo.webp"
-                alt="Denisee Ventura"
-                style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center 15%' }}
-              />
+        <div style={{ maxWidth: 1000, margin: '0 auto', textAlign: 'center' }}>
+          <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: 2, textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: 8 }}>
+            Quiénes somos
+          </p>
+          <h2 style={{ fontFamily: 'var(--font-display)', fontSize: 'clamp(1.8rem, 4vw, 2.6rem)', fontWeight: 400, fontStyle: 'italic', color: 'var(--hot)', marginBottom: 12 }}>
+            Madre e hija, unidas por la belleza
+          </h2>
+          <p style={{ fontSize: 16, color: 'var(--text-soft)', lineHeight: 1.8, maxWidth: 600, margin: '0 auto 40px' }}>
+            {settings.about_text}
+          </p>
+
+          {/* Dual orbs */}
+          <div style={{
+            display: 'flex', gap: 32, justifyContent: 'center', alignItems: 'center',
+            flexWrap: 'wrap',
+          }} className="about-orbs">
+            {/* Cleo */}
+            <div style={{ textAlign: 'center' }}>
+              <div style={{
+                width: 200, height: 200,
+                borderRadius: '50%',
+                overflow: 'hidden',
+                boxShadow: '0 0 0 5px var(--pink), 0 12px 40px rgba(235,25,130,0.18)',
+                margin: '0 auto 14px',
+                background: 'linear-gradient(135deg, var(--pink), #ffd6e7)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+              }}>
+                {/* Placeholder — replace with real photo */}
+                <span style={{ fontSize: 48, opacity: 0.5 }}>👩🏽</span>
+              </div>
+              <p style={{ fontFamily: 'var(--font-display)', fontSize: 18, fontWeight: 400, fontStyle: 'italic', color: 'var(--text)' }}>
+                Cleo Garcia
+              </p>
+              <p style={{ fontSize: 12, color: 'var(--text-muted)', fontWeight: 600, letterSpacing: 1, textTransform: 'uppercase' }}>
+                Co-fundadora
+              </p>
+            </div>
+
+            {/* Denisee */}
+            <div style={{ textAlign: 'center' }}>
+              <div style={{
+                width: 200, height: 200,
+                borderRadius: '50%',
+                overflow: 'hidden',
+                boxShadow: '0 0 0 5px var(--pink), 0 12px 40px rgba(235,25,130,0.18)',
+                margin: '0 auto 14px',
+              }}>
+                <img
+                  src="/about-photo.webp"
+                  alt="Denisee Ventura"
+                  style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center 15%' }}
+                />
+              </div>
+              <p style={{ fontFamily: 'var(--font-display)', fontSize: 18, fontWeight: 400, fontStyle: 'italic', color: 'var(--text)' }}>
+                Denisee Ventura
+              </p>
+              <p style={{ fontSize: 12, color: 'var(--text-muted)', fontWeight: 600, letterSpacing: 1, textTransform: 'uppercase' }}>
+                Co-fundadora
+              </p>
             </div>
           </div>
-          {/* Text */}
-          <div>
-            <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: 2, textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: 4 }}>
-              La fundadora
-            </p>
-            <h2 style={{ fontFamily: 'var(--font-display)', fontSize: 34, fontWeight: 400, fontStyle: 'italic', color: 'var(--hot)', marginBottom: 14 }}>
-              Denisee Ventura
-            </h2>
-            <p style={{ fontSize: 16, color: 'var(--text-soft)', lineHeight: 1.8 }}>
-              {settings.about_text}
-            </p>
+
+          {/* Link to full story */}
+          <div style={{ marginTop: 32 }}>
+            <Link to="/sobre-nosotras" style={{
+              display: 'inline-flex', alignItems: 'center', gap: 8,
+              color: 'var(--hot)', fontSize: 14, fontWeight: 600,
+              textDecoration: 'none', borderBottom: '1.5px solid var(--hot)',
+              paddingBottom: 2,
+            }}>
+              Conoce nuestra historia →
+            </Link>
           </div>
         </div>
         <style>{`@media (max-width: 768px) {
-          .about-grid { flex-direction: column; text-align: center; align-items: center; }
-          .about-grid > div:first-child > div { width: 280px !important; height: 280px !important; }
+          .about-orbs > div > div:first-child { width: 160px !important; height: 160px !important; }
         }`}</style>
       </section>
 
@@ -406,7 +449,9 @@ export function HomePage() {
             min-width: unset !important;
             border-radius: 0 !important;
             padding: 40px 24px !important;
-            background: rgba(255,255,255,0.88) !important;
+            background: rgba(255,255,255,0.55) !important;
+            backdrop-filter: blur(16px) !important;
+            -webkit-backdrop-filter: blur(16px) !important;
           }
         }
       `}</style>

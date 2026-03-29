@@ -21,7 +21,7 @@ export function Footer() {
             <img
               src="/chlea-care-logo.svg"
               alt="Chlea Care"
-              style={{ height: 34, marginBottom: 14, filter: 'brightness(0) invert(1)' }}
+              style={{ height: 52, marginBottom: 14 }}
             />
             <p style={{ fontSize: 13, lineHeight: 1.6, opacity: 0.7, maxWidth: 220 }}>
               Premium Beauty &amp; Lifestyle<br />Santo Domingo, RD
@@ -133,7 +133,7 @@ export function Footer() {
         </div>
 
         <div style={{ borderTop: '1px solid rgba(255,255,255,0.12)', paddingTop: 24, textAlign: 'center', fontSize: 13, opacity: 0.55 }}>
-          © 2025 Chlea Care · Con amor, Denisee Ventura 🩷
+          © 2025 Chlea Care · Con amor, Cleo & Denisee 🩷
         </div>
       </div>
     </footer>

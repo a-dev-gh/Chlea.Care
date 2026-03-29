@@ -1,8 +1,9 @@
 import { useState, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { SEED_PRODUCTS, SEED_CATEGORIES } from '../data/seedData';
+import { SEED_PRODUCTS, SEED_CATEGORIES, SEED_BRANDS } from '../data/seedData';
 import { ProductGrid } from '../components/product/ProductGrid';
 import { formatPrice } from '../utils/formatPrice';
+import { getBrandsForCategory } from '../utils/brandFilters';
 
 const SORT_OPTIONS = [
   { value: 'relevancia',  label: 'Relevancia' },
@@ -29,10 +30,9 @@ export function CatalogPage() {
   const [activePills, setActivePills] = useState<string[]>([]);
   const [priceOpen, setPriceOpen] = useState(true);
   const [brandOpen, setBrandOpen] = useState(true);
-  // Track which label groups are open (all open by default)
   const [labelGroupsOpen, setLabelGroupsOpen] = useState<Record<string, boolean>>({});
-  // Track selected label values per group
   const [selectedLabels, setSelectedLabels] = useState<Record<string, string[]>>({});
+  const [catalogSearch, setCatalogSearch] = useState(params.get('q') || '');
 
   const category  = params.get('categoria') || 'todos';
   const searchQ   = params.get('q') || '';
@@ -40,7 +40,14 @@ export function CatalogPage() {
   // Only women's products in main catalog — men's is separate page
   const womenCategories = SEED_CATEGORIES.filter(c => !c.is_men);
   const allProducts = SEED_PRODUCTS.filter(p => p.is_visible && p.category !== 'hombres');
-  const allBrands = [...new Set(allProducts.map(p => p.brand).filter(Boolean))] as string[];
+
+  // Dynamic brands — only show brands that have products in the selected category
+  const brandsInCategory = useMemo(() => {
+    if (category === 'todos') {
+      return getBrandsForCategory('', allProducts, SEED_BRANDS);
+    }
+    return getBrandsForCategory(category, allProducts, SEED_BRANDS);
+  }, [category]);
 
   // Collect dynamic label groups from products in current category
   const labelGroups = useMemo(() => {
@@ -57,19 +64,52 @@ export function CatalogPage() {
       }
     }
 
-    // Convert to sorted arrays
     return Object.entries(groups)
       .map(([name, valuesSet]) => ({ name, values: [...valuesSet].sort() }))
       .sort((a, b) => a.name.localeCompare(b.name));
   }, [category]);
+
+  // Check if any filter is active
+  const hasActiveFilters = selectedBrands.length > 0 || activePills.length > 0 ||
+    minPrice > 200 || maxPrice < 5000 ||
+    Object.values(selectedLabels).some(v => v.length > 0) ||
+    searchQ.length > 0;
+
+  function resetAllFilters() {
+    setSelectedBrands([]);
+    setActivePills([]);
+    setMinPrice(200);
+    setMaxPrice(5000);
+    setSelectedLabels({});
+    setCatalogSearch('');
+    const next = new URLSearchParams();
+    if (category !== 'todos') next.set('categoria', category);
+    setParams(next);
+  }
 
   function setCategory(cat: string) {
     const next = new URLSearchParams(params);
     if (cat === 'todos') next.delete('categoria'); else next.set('categoria', cat);
     next.delete('q');
     setParams(next);
-    // Reset label filters when category changes since labels are category-dependent
     setSelectedLabels({});
+    setSelectedBrands([]);
+    setCatalogSearch('');
+  }
+
+  function handleCatalogSearch(e: React.FormEvent) {
+    e.preventDefault();
+    const next = new URLSearchParams(params);
+    if (catalogSearch.trim()) next.set('q', catalogSearch.trim());
+    else next.delete('q');
+    setParams(next);
+  }
+
+  function removeSearchFilter() {
+    setCatalogSearch('');
+    const next = new URLSearchParams(params);
+    next.delete('q');
+    setParams(next);
   }
 
   function togglePill(key: string) {
@@ -91,7 +131,7 @@ export function CatalogPage() {
   }
 
   function isLabelGroupOpen(name: string) {
-    return labelGroupsOpen[name] !== false; // default open
+    return labelGroupsOpen[name] !== false;
   }
 
   const filtered = useMemo(() => {
@@ -99,7 +139,7 @@ export function CatalogPage() {
     if (category !== 'todos') result = result.filter(p => p.category === category);
     if (searchQ) {
       const q = searchQ.toLowerCase();
-      result = result.filter(p => p.name.toLowerCase().includes(q) || p.description.toLowerCase().includes(q));
+      result = result.filter(p => p.name.toLowerCase().includes(q) || p.description.toLowerCase().includes(q) || (p.brand || '').toLowerCase().includes(q));
     }
     if (activePills.includes('oferta'))     result = result.filter(p => p.sale_percent > 0);
     if (activePills.includes('nuevo'))      result = result.filter(p => p.badge === 'Nuevo');
@@ -108,7 +148,6 @@ export function CatalogPage() {
     if (maxPrice < 5000) result = result.filter(p => p.price <= maxPrice);
     if (selectedBrands.length) result = result.filter(p => selectedBrands.includes(p.brand || ''));
 
-    // Apply dynamic label filters
     for (const [group, values] of Object.entries(selectedLabels)) {
       if (values.length === 0) continue;
       result = result.filter(p => {
@@ -122,6 +161,24 @@ export function CatalogPage() {
     if (sort === 'precio-desc') result.sort((a, b) => b.price - a.price);
     return result;
   }, [category, searchQ, minPrice, maxPrice, selectedBrands, sort, activePills, selectedLabels]);
+
+  // Collect all active filter tags for the tag strip
+  const activeFilterTags: { label: string; onRemove: () => void }[] = [];
+  if (searchQ) activeFilterTags.push({ label: `"${searchQ}"`, onRemove: removeSearchFilter });
+  activePills.forEach(key => {
+    const pill = FILTER_PILLS.find(p => p.key === key);
+    if (pill) activeFilterTags.push({ label: `${pill.icon} ${pill.label}`, onRemove: () => togglePill(key) });
+  });
+  selectedBrands.forEach(b => {
+    activeFilterTags.push({ label: b, onRemove: () => toggleBrand(b) });
+  });
+  if (minPrice > 200) activeFilterTags.push({ label: `Min: ${formatPrice(minPrice)}`, onRemove: () => setMinPrice(200) });
+  if (maxPrice < 5000) activeFilterTags.push({ label: `Max: ${formatPrice(maxPrice)}`, onRemove: () => setMaxPrice(5000) });
+  Object.entries(selectedLabels).forEach(([group, values]) => {
+    values.forEach(v => {
+      activeFilterTags.push({ label: v, onRemove: () => toggleLabel(group, v) });
+    });
+  });
 
   // Collapsible filter section component
   const FilterSection = ({ title, isOpen, onToggle, children }: {
@@ -176,7 +233,6 @@ export function CatalogPage() {
               fontFamily: 'var(--font-body)',
               cursor: 'pointer', textAlign: 'left',
               transition: 'all 0.15s',
-              borderBottom: 'none',
             }}
               onMouseEnter={e => { if (!active) (e.currentTarget as HTMLElement).style.color = 'var(--text)'; }}
               onMouseLeave={e => { if (!active) (e.currentTarget as HTMLElement).style.color = 'var(--text-soft)'; }}
@@ -190,9 +246,21 @@ export function CatalogPage() {
 
       {/* Divider */}
       <div style={{ borderTop: '1px solid var(--border)', paddingTop: 20, marginBottom: 8 }}>
-        <p style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-muted)', letterSpacing: 1, textTransform: 'uppercase', marginBottom: 16 }}>
-          Filtros
-        </p>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+          <p style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-muted)', letterSpacing: 1, textTransform: 'uppercase', margin: 0 }}>
+            Filtros
+          </p>
+          {hasActiveFilters && (
+            <button onClick={resetAllFilters} style={{
+              background: 'none', border: 'none', cursor: 'pointer',
+              fontSize: 12, fontWeight: 600, color: 'var(--hot)',
+              fontFamily: 'var(--font-body)', padding: 0,
+              textDecoration: 'underline',
+            }}>
+              Limpiar todo
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Price Range */}
@@ -251,21 +319,23 @@ export function CatalogPage() {
           style={{ width: '100%', accentColor: 'var(--hot)' }} />
       </FilterSection>
 
-      {/* Brand */}
-      <FilterSection title="Marca" isOpen={brandOpen} onToggle={() => setBrandOpen(!brandOpen)}>
-        {allBrands.map(brand => (
-          <label key={brand} style={{
-            display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10,
-            cursor: 'pointer', fontSize: 14, color: 'var(--text-soft)',
-          }}>
-            <input type="checkbox" checked={selectedBrands.includes(brand)} onChange={() => toggleBrand(brand)}
-              style={{ accentColor: 'var(--hot)', width: 16, height: 16 }} />
-            {brand}
-          </label>
-        ))}
-      </FilterSection>
+      {/* Brand — only shows if brands exist for this category */}
+      {brandsInCategory.length > 0 && (
+        <FilterSection title="Marca" isOpen={brandOpen} onToggle={() => setBrandOpen(!brandOpen)}>
+          {brandsInCategory.map(brand => (
+            <label key={brand.slug} style={{
+              display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10,
+              cursor: 'pointer', fontSize: 14, color: 'var(--text-soft)',
+            }}>
+              <input type="checkbox" checked={selectedBrands.includes(brand.name)} onChange={() => toggleBrand(brand.name)}
+                style={{ accentColor: 'var(--hot)', width: 16, height: 16 }} />
+              {brand.name}
+            </label>
+          ))}
+        </FilterSection>
+      )}
 
-      {/* Dynamic label groups — populated from product labels in current category */}
+      {/* Dynamic label groups */}
       {labelGroups.map(group => (
         <FilterSection
           key={group.name}
@@ -322,6 +392,74 @@ export function CatalogPage() {
 
         {/* Main content */}
         <div style={{ flex: 1, minWidth: 0 }}>
+          {/* Catalog search bar */}
+          <form onSubmit={handleCatalogSearch} style={{
+            display: 'flex', alignItems: 'center', gap: 0,
+            marginBottom: 16,
+            border: '1.5px solid var(--border2)',
+            borderRadius: 'var(--r-pill)',
+            overflow: 'hidden',
+            background: 'var(--white)',
+            transition: 'border-color 0.2s',
+          }}>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" strokeWidth="2"
+              style={{ marginLeft: 14, flexShrink: 0 }}>
+              <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+            </svg>
+            <input
+              type="text"
+              value={catalogSearch}
+              onChange={e => setCatalogSearch(e.target.value)}
+              placeholder="Buscar en catálogo..."
+              style={{
+                flex: 1, padding: '11px 14px', fontSize: 14,
+                border: 'none', outline: 'none', background: 'transparent',
+                fontFamily: 'var(--font-body)', color: 'var(--text)',
+              }}
+            />
+            {catalogSearch && (
+              <button type="button" onClick={removeSearchFilter} style={{
+                background: 'none', border: 'none', cursor: 'pointer',
+                padding: '0 10px', color: 'var(--text-muted)', fontSize: 16,
+              }}>✕</button>
+            )}
+          </form>
+
+          {/* Active filter tags strip */}
+          {activeFilterTags.length > 0 && (
+            <div style={{
+              display: 'flex', gap: 8, flexWrap: 'wrap',
+              marginBottom: 16, alignItems: 'center',
+            }}>
+              {activeFilterTags.map((tag, i) => (
+                <span key={i} style={{
+                  display: 'inline-flex', alignItems: 'center', gap: 6,
+                  padding: '5px 12px', fontSize: 12, fontWeight: 600,
+                  background: 'rgba(235,25,130,0.08)',
+                  color: 'var(--hot)',
+                  border: '1px solid rgba(235,25,130,0.2)',
+                  borderRadius: 'var(--r-pill)',
+                  fontFamily: 'var(--font-body)',
+                }}>
+                  {tag.label}
+                  <button onClick={tag.onRemove} style={{
+                    background: 'none', border: 'none', cursor: 'pointer',
+                    color: 'var(--hot)', fontSize: 14, padding: 0,
+                    lineHeight: 1, display: 'flex',
+                  }}>✕</button>
+                </span>
+              ))}
+              <button onClick={resetAllFilters} style={{
+                background: 'none', border: 'none', cursor: 'pointer',
+                fontSize: 12, fontWeight: 600, color: 'var(--text-muted)',
+                fontFamily: 'var(--font-body)', textDecoration: 'underline',
+                padding: '5px 4px',
+              }}>
+                Limpiar todo
+              </button>
+            </div>
+          )}
+
           {/* Filter pills row */}
           <div style={{
             display: 'flex', gap: 10, flexWrap: 'wrap',
@@ -381,7 +519,17 @@ export function CatalogPage() {
           ) : (
             <div style={{ textAlign: 'center', padding: '80px 0' }}>
               <div style={{ fontSize: 52, marginBottom: 16 }}>🔍</div>
-              <p style={{ fontSize: 16, color: 'var(--text-muted)' }}>No encontramos productos con esos filtros.</p>
+              <p style={{ fontSize: 16, color: 'var(--text-muted)', marginBottom: 16 }}>No encontramos productos con esos filtros.</p>
+              {hasActiveFilters && (
+                <button onClick={resetAllFilters} style={{
+                  background: 'var(--hot)', color: '#fff',
+                  border: 'none', borderRadius: 'var(--r-pill)',
+                  padding: '12px 28px', fontSize: 14, fontWeight: 600,
+                  fontFamily: 'var(--font-body)', cursor: 'pointer',
+                }}>
+                  Limpiar filtros
+                </button>
+              )}
             </div>
           )}
         </div>

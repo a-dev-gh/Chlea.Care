@@ -1,12 +1,31 @@
-import { Link } from 'react-router-dom';
-import { SEED_BRANDS, SEED_PRODUCTS } from '../data/seedData';
+import { useState } from 'react';
+import { Link, useSearchParams } from 'react-router-dom';
+import { SEED_BRANDS, SEED_PRODUCTS, SEED_CATEGORIES } from '../data/seedData';
+import { getBrandsForCategory } from '../utils/brandFilters';
 
-const EMOJIS = ['✨', '💫', '🌿', '⚡'];
+const CATEGORY_TABS = [
+  { slug: 'todas', label: 'Todas' },
+  ...SEED_CATEGORIES.map(c => ({ slug: c.slug, label: c.name })),
+];
 
 export function BrandsPage() {
+  const [params, setParams] = useSearchParams();
+  const activeTab = params.get('categoria') || 'todas';
+
+  function setTab(slug: string) {
+    const next = new URLSearchParams();
+    if (slug !== 'todas') next.set('categoria', slug);
+    setParams(next);
+  }
+
+  // Filter brands: only show brands with products AND a logo
+  const filteredBrands = activeTab === 'todas'
+    ? SEED_BRANDS.filter(b => b.logo && SEED_PRODUCTS.some(p => p.brand === b.name && p.is_visible))
+    : getBrandsForCategory(activeTab, SEED_PRODUCTS, SEED_BRANDS).filter(b => b.logo);
+
   return (
     <div style={{ maxWidth: 1280, margin: '0 auto', padding: '56px 24px' }}>
-      <div style={{ textAlign: 'center', marginBottom: 56 }}>
+      <div style={{ textAlign: 'center', marginBottom: 40 }}>
         <p className="section-label" style={{ marginBottom: 8 }}>Curado con amor</p>
         <h1 className="section-title">Nuestras Marcas</h1>
         <p style={{ fontSize: 15, color: 'var(--text-muted)', marginTop: 12 }}>
@@ -14,9 +33,43 @@ export function BrandsPage() {
         </p>
       </div>
 
+      {/* Category filter tabs */}
+      <div style={{
+        display: 'flex', gap: 10, justifyContent: 'center',
+        flexWrap: 'wrap', marginBottom: 40,
+      }}>
+        {CATEGORY_TABS.map(tab => {
+          const active = activeTab === tab.slug;
+          // Only show tab if it has brands (or it's "todas")
+          if (tab.slug !== 'todas') {
+            const brandsInTab = getBrandsForCategory(tab.slug, SEED_PRODUCTS, SEED_BRANDS).filter(b => b.logo);
+            if (brandsInTab.length === 0) return null;
+          }
+          return (
+            <button key={tab.slug} onClick={() => setTab(tab.slug)} style={{
+              padding: '9px 22px',
+              borderRadius: 'var(--r-pill)',
+              border: active ? '1.5px solid var(--hot)' : '1.5px solid var(--border2)',
+              background: active ? 'rgba(235,25,130,0.08)' : 'var(--white)',
+              color: active ? 'var(--hot)' : 'var(--text-soft)',
+              fontSize: 14, fontWeight: 600,
+              fontFamily: 'var(--font-body)',
+              cursor: 'pointer',
+              transition: 'all 0.15s',
+            }}
+              onMouseEnter={e => { if (!active) (e.currentTarget as HTMLElement).style.borderColor = 'var(--hot)'; }}
+              onMouseLeave={e => { if (!active) (e.currentTarget as HTMLElement).style.borderColor = 'var(--border2)'; }}
+            >
+              {tab.label}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Brands grid */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 28 }}>
-        {SEED_BRANDS.map((brand, i) => {
-          const count = SEED_PRODUCTS.filter(p => p.brand === brand.name).length;
+        {filteredBrands.map(brand => {
+          const count = SEED_PRODUCTS.filter(p => p.brand === brand.name && p.is_visible).length;
           return (
             <Link key={brand.slug} to={`/marcas/${brand.slug}`} style={{ textDecoration: 'none' }}>
               <div style={{
@@ -26,6 +79,7 @@ export function BrandsPage() {
                 padding: '40px 32px',
                 transition: 'all 0.22s ease',
                 cursor: 'pointer',
+                textAlign: 'center',
               }}
                 onMouseEnter={e => {
                   const el = e.currentTarget as HTMLElement;
@@ -40,15 +94,28 @@ export function BrandsPage() {
                   el.style.borderColor = 'var(--border)';
                 }}
               >
+                {/* Brand logo or initial */}
                 <div style={{
-                  width: 72, height: 72, borderRadius: '50%',
-                  background: 'linear-gradient(135deg,var(--pink),#ffd6e7)',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontSize: 32, marginBottom: 20,
+                  height: 72, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  marginBottom: 20,
                 }}>
-                  {EMOJIS[i] || '✨'}
+                  {brand.logo ? (
+                    <img src={brand.logo} alt={brand.name} style={{
+                      maxHeight: 56, maxWidth: 160, objectFit: 'contain',
+                    }} />
+                  ) : (
+                    <div style={{
+                      width: 72, height: 72, borderRadius: '50%',
+                      background: 'linear-gradient(135deg,var(--pink),#ffd6e7)',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      fontFamily: 'var(--font-display)', fontSize: 28, fontWeight: 600,
+                      fontStyle: 'italic', color: 'var(--hot)',
+                    }}>
+                      {brand.name.charAt(0)}
+                    </div>
+                  )}
                 </div>
-                <h2 style={{ fontFamily: 'var(--font-display)', fontSize: 26, fontWeight: 400, color: 'var(--text)', marginBottom: 8 }}>
+                <h2 style={{ fontFamily: 'var(--font-display)', fontSize: 24, fontWeight: 400, color: 'var(--text)', marginBottom: 8 }}>
                   {brand.name}
                 </h2>
                 <p style={{ fontSize: 14, color: 'var(--text-muted)', marginBottom: 16, lineHeight: 1.5 }}>
@@ -62,6 +129,12 @@ export function BrandsPage() {
           );
         })}
       </div>
+
+      {filteredBrands.length === 0 && (
+        <div style={{ textAlign: 'center', padding: '60px 0' }}>
+          <p style={{ fontSize: 16, color: 'var(--text-muted)' }}>No hay marcas en esta categoría aún.</p>
+        </div>
+      )}
     </div>
   );
 }

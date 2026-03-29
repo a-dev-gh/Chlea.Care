@@ -5,6 +5,8 @@ const DEFAULTS: Record<string, string> = {
   hero_tagline:   'Glow Different, Glow Chlea',
   hero_sub:       'Productos premium de cabello, piel y estilo curados para las que exigen más.',
   about_text:     'Chlea Care nació de un sueño simple: que cada mujer tenga acceso a productos de belleza que realmente funcionen, sin comprometer su bienestar ni su estilo. Aquí cuido cada detalle para que tú brilles.',
+  search_featured_labels: 'Tipo de Cabello,Preocupaciones',
+  search_price_filter: 'true',
 };
 
 export function useSiteSettings(): Record<string, string> {
