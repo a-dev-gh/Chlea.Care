@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthContext } from '../../contexts/AuthContext';
 
@@ -6,13 +6,46 @@ import { useAuthContext } from '../../contexts/AuthContext';
 // infinite redirect loop that occurs when unauthenticated users hit the
 // root route on the studio subdomain.
 export function AdminLoginPage() {
-  const { signIn, role, loading: authLoading } = useAuthContext();
+  const { signIn, user, role, loading: authLoading } = useAuthContext();
   const navigate = useNavigate();
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  // Track whether we're waiting for the role to resolve after sign-in
+  const [waitingForRole, setWaitingForRole] = useState(false);
+
+  // React to role changes after sign-in (avoids stale closure bug)
+  useEffect(() => {
+    if (!waitingForRole) return;
+    if (role) {
+      // Role resolved — user is an admin, navigate to dashboard
+      setWaitingForRole(false);
+      setSubmitting(false);
+      navigate('/productos', { replace: true });
+    }
+  }, [role, waitingForRole, navigate]);
+
+  // Timeout: if user signed in but role doesn't resolve within 3s
+  useEffect(() => {
+    if (!waitingForRole) return;
+    const timer = setTimeout(() => {
+      if (!role) {
+        setWaitingForRole(false);
+        setSubmitting(false);
+        setError('No tienes permisos de administrador.');
+      }
+    }, 3000);
+    return () => clearTimeout(timer);
+  }, [waitingForRole, role]);
+
+  // If already logged in as admin, redirect immediately
+  useEffect(() => {
+    if (user && role) {
+      navigate('/productos', { replace: true });
+    }
+  }, [user, role, navigate]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -27,23 +60,8 @@ export function AdminLoginPage() {
       return;
     }
 
-    // After sign-in the AuthContext re-evaluates; give it a tick then check role
-    // useAuth sets role by querying admin_users — if role is null the user has
-    // no admin privileges.
-    // We re-check via a short poll so the context has time to resolve the role.
-    let attempts = 0;
-    const checkRole = setInterval(() => {
-      attempts++;
-      if (role) {
-        clearInterval(checkRole);
-        navigate('/productos', { replace: true });
-      } else if (attempts >= 10) {
-        // After ~2 s the role is still null → not an admin user
-        clearInterval(checkRole);
-        setError('No tienes permisos de administrador.');
-        setSubmitting(false);
-      }
-    }, 200);
+    // Sign-in succeeded — now wait for the AuthContext to resolve the role
+    setWaitingForRole(true);
   }
 
   // Page-level wrapper: centered card on a soft pink-tinted background
