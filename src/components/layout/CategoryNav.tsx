@@ -50,7 +50,7 @@ export function CategoryNav() {
         justifyContent: 'center',
         gap: 0,
         padding: '0 24px',
-        overflowX: 'auto',
+        overflow: 'visible',
         scrollbarWidth: 'none',
         position: 'relative',
         zIndex: 40,
@@ -121,13 +121,16 @@ export function CategoryNav() {
               )}
             </button>
 
-            {/* Dropdown */}
+            {/* Dropdown with hover bridge */}
             {hasDropdown && isOpen && (
               <div
                 className="cat-dropdown"
+                onMouseEnter={() => setActiveDropdown(link.key)}
+                onMouseLeave={() => setActiveDropdown(null)}
                 style={{
                   position: 'absolute',
                   top: '100%',
+                  paddingTop: 0,
                   left: '50%',
                   transform: 'translateX(-50%)',
                   minWidth: 220,
@@ -193,6 +196,9 @@ export function CategoryNav() {
       <style>{`
         .cat-nav::-webkit-scrollbar { display: none; }
         .cat-link:hover { color: var(--pink) !important; }
+        /* Keep dropdown open when hovering over the item or its dropdown */
+        .cat-item { padding-bottom: 0; }
+        .cat-item:hover > .cat-dropdown { display: block; }
         @keyframes dropdownIn {
           from { opacity: 0; transform: translateX(-50%) translateY(-4px); }
           to   { opacity: 1; transform: translateX(-50%) translateY(0); }

@@ -79,17 +79,32 @@ export function Footer() {
             <h4 style={{ fontSize: 11, fontWeight: 700, letterSpacing: 2, textTransform: 'uppercase', marginBottom: 16, color: 'var(--pink)' }}>
               Chlea Care
             </h4>
-            {['Sobre Nosotros', 'Contacto', 'WhatsApp'].map(l => (
-              <a key={l} href={l === 'WhatsApp' ? 'https://wa.me/18097756773' : '#'} style={{
+            {[
+              { label: 'Sobre Nosotros', href: '#' },
+              { label: 'Contacto', href: '#' },
+              { label: 'Políticas de Envío', href: '/politicas-envio', isRoute: true },
+              { label: 'Políticas de Reembolso', href: '/politicas-reembolso', isRoute: true },
+              { label: 'WhatsApp', href: 'https://wa.me/18097756773', external: true },
+            ].map(l => l.isRoute ? (
+              <Link key={l.label} to={l.href} style={{
                 display: 'block', fontSize: 14, marginBottom: 10,
                 color: 'rgba(255,255,255,0.7)', transition: 'color 0.2s',
                 textDecoration: 'none',
               }}
-                target={l === 'WhatsApp' ? '_blank' : undefined}
-                rel={l === 'WhatsApp' ? 'noreferrer' : undefined}
                 onMouseEnter={e => ((e.target as HTMLElement).style.color = 'var(--pink)')}
                 onMouseLeave={e => ((e.target as HTMLElement).style.color = 'rgba(255,255,255,0.7)')}
-              >{l}</a>
+              >{l.label}</Link>
+            ) : (
+              <a key={l.label} href={l.href} style={{
+                display: 'block', fontSize: 14, marginBottom: 10,
+                color: 'rgba(255,255,255,0.7)', transition: 'color 0.2s',
+                textDecoration: 'none',
+              }}
+                target={l.external ? '_blank' : undefined}
+                rel={l.external ? 'noreferrer' : undefined}
+                onMouseEnter={e => ((e.target as HTMLElement).style.color = 'var(--pink)')}
+                onMouseLeave={e => ((e.target as HTMLElement).style.color = 'rgba(255,255,255,0.7)')}
+              >{l.label}</a>
             ))}
           </div>
 

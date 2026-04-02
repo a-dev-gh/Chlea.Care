@@ -1,15 +1,54 @@
-import { useState } from 'react';
-import { SEED_BLOG_POSTS, BLOG_CATEGORIES, BlogPost } from '../../data/seedBlog';
+import { useState, useEffect, useCallback } from 'react';
 import { Button } from '../../components/ui/Button';
+import { adminFetch, adminInsert, adminUpdate, adminDelete } from '../../utils/adminApi';
+import { supabase } from '../../utils/supabase';
+import { SEED_BLOG_POSTS, BLOG_CATEGORIES } from '../../data/seedBlog';
+import type { BlogPost } from '../../types/database';
+
+// Seed fallback mapper
+function seedToBlogs(): BlogPost[] {
+  return SEED_BLOG_POSTS.map(p => ({
+    ...p,
+    is_visible: p.is_visible,
+    created_at: p.published_at,
+  }));
+}
+
+function generateSlug(title: string): string {
+  return title
+    .toLowerCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/(^-|-$)/g, '')
+    .slice(0, 60);
+}
+
+const inputStyle: React.CSSProperties = {
+  width: '100%', padding: '10px 14px',
+  border: '1.5px solid var(--border2)', borderRadius: 'var(--r-sm)',
+  fontSize: 14, fontFamily: 'var(--font-body)', color: 'var(--text)',
+  outline: 'none', background: 'var(--white)',
+};
 
 export function AdminBlog() {
-  const [posts, setPosts] = useState<BlogPost[]>([...SEED_BLOG_POSTS]);
-  const [editing, setEditing] = useState<BlogPost | null>(null);
-  const [saved, setSaved] = useState(false);
+  const [posts, setPosts] = useState<BlogPost[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [editing, setEditing] = useState<Partial<BlogPost> | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [feedback, setFeedback] = useState('');
+
+  const loadPosts = useCallback(async () => {
+    setLoading(true);
+    // Fetch all posts (not just visible) for the admin view
+    const data = await adminFetch<BlogPost>('blog_posts', { orderBy: 'published_at', ascending: false });
+    setPosts(data.length > 0 ? data : seedToBlogs());
+    setLoading(false);
+  }, []);
+
+  useEffect(() => { loadPosts(); }, [loadPosts]);
 
   function createNew() {
-    const newPost: BlogPost = {
-      id: String(Date.now()),
+    setEditing({
       title: '',
       slug: '',
       excerpt: '',
@@ -18,48 +57,65 @@ export function AdminBlog() {
       category: BLOG_CATEGORIES[0],
       published_at: new Date().toISOString().split('T')[0],
       is_visible: false,
-    };
-    setEditing(newPost);
-  }
-
-  function generateSlug(title: string) {
-    return title
-      .toLowerCase()
-      .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-      .replace(/[^a-z0-9]+/g, '-')
-      .replace(/(^-|-$)/g, '')
-      .slice(0, 60);
-  }
-
-  function handleSave() {
-    if (!editing) return;
-    const updated = editing;
-    if (!updated.slug) updated.slug = generateSlug(updated.title);
-
-    setPosts(prev => {
-      const exists = prev.find(p => p.id === updated.id);
-      if (exists) return prev.map(p => p.id === updated.id ? updated : p);
-      return [...prev, updated];
     });
+  }
+
+  async function handleSave() {
+    if (!editing || !editing.title?.trim()) return;
+    setSaving(true);
+
+    const slug = editing.slug || generateSlug(editing.title);
+    const payload = { ...editing, slug };
+
+    const isExisting = editing.id && posts.find(p => p.id === editing.id);
+
+    if (supabase) {
+      if (isExisting) {
+        const { id, created_at, ...rest } = payload as any;
+        await adminUpdate<BlogPost>('blog_posts', editing.id!, rest);
+      } else {
+        const { id, created_at, ...rest } = payload as any;
+        await adminInsert<BlogPost>('blog_posts', rest);
+      }
+      await loadPosts();
+    } else {
+      // Local fallback
+      if (isExisting) {
+        setPosts(prev => prev.map(p => p.id === editing.id ? { ...p, ...payload } as BlogPost : p));
+      } else {
+        const newPost = { ...payload, id: String(Date.now()), created_at: new Date().toISOString() } as BlogPost;
+        setPosts(prev => [newPost, ...prev]);
+      }
+    }
+
+    setSaving(false);
     setEditing(null);
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2500);
+    setFeedback('Post guardado');
+    setTimeout(() => setFeedback(''), 2500);
   }
 
-  function toggleVisibility(id: string) {
-    setPosts(prev => prev.map(p => p.id === id ? { ...p, is_visible: !p.is_visible } : p));
+  async function toggleVisibility(post: BlogPost) {
+    const newVal = !post.is_visible;
+    if (supabase) {
+      await adminUpdate<BlogPost>('blog_posts', post.id, { is_visible: newVal } as any);
+      await loadPosts();
+    } else {
+      setPosts(prev => prev.map(p => p.id === post.id ? { ...p, is_visible: newVal } : p));
+    }
   }
 
-  function deletePost(id: string) {
-    setPosts(prev => prev.filter(p => p.id !== id));
+  async function deletePost(id: string) {
+    if (supabase) {
+      const ok = await adminDelete('blog_posts', id);
+      if (ok) await loadPosts();
+    } else {
+      setPosts(prev => prev.filter(p => p.id !== id));
+    }
   }
 
-  const inputStyle = {
-    width: '100%', padding: '10px 14px',
-    border: '1.5px solid var(--border2)', borderRadius: 'var(--r-sm)',
-    fontSize: 14, fontFamily: 'var(--font-body)', color: 'var(--text)',
-    outline: 'none', background: 'var(--white)',
-  };
+  if (loading) {
+    return <div style={{ padding: 32, textAlign: 'center', color: 'var(--text-muted)' }}>Cargando blog...</div>;
+  }
 
   return (
     <div style={{ padding: 32, maxWidth: 900 }}>
@@ -81,18 +137,18 @@ export function AdminBlog() {
           padding: 28, marginBottom: 28,
         }}>
           <h3 style={{ fontSize: 16, fontWeight: 700, marginBottom: 20, color: 'var(--text)' }}>
-            {posts.find(p => p.id === editing.id) ? 'Editar Post' : 'Nuevo Post'}
+            {editing.id && posts.find(p => p.id === editing.id) ? 'Editar Post' : 'Nuevo Post'}
           </h3>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
             <div>
               <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', letterSpacing: 1, textTransform: 'uppercase', marginBottom: 6, display: 'block' }}>
-                Título
+                Titulo
               </label>
               <input
-                value={editing.title}
+                value={editing.title || ''}
                 onChange={e => setEditing({ ...editing, title: e.target.value, slug: generateSlug(e.target.value) })}
-                placeholder="Título del post"
+                placeholder="Titulo del post"
                 style={inputStyle}
               />
             </div>
@@ -100,10 +156,10 @@ export function AdminBlog() {
             <div style={{ display: 'flex', gap: 16 }}>
               <div style={{ flex: 1 }}>
                 <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', letterSpacing: 1, textTransform: 'uppercase', marginBottom: 6, display: 'block' }}>
-                  Categoría
+                  Categoria
                 </label>
                 <select
-                  value={editing.category}
+                  value={editing.category || BLOG_CATEGORIES[0]}
                   onChange={e => setEditing({ ...editing, category: e.target.value })}
                   style={{ ...inputStyle, cursor: 'pointer' }}
                 >
@@ -116,7 +172,7 @@ export function AdminBlog() {
                 </label>
                 <input
                   type="date"
-                  value={editing.published_at}
+                  value={editing.published_at || ''}
                   onChange={e => setEditing({ ...editing, published_at: e.target.value })}
                   style={inputStyle}
                 />
@@ -128,7 +184,7 @@ export function AdminBlog() {
                 URL de imagen (opcional)
               </label>
               <input
-                value={editing.image_url}
+                value={editing.image_url || ''}
                 onChange={e => setEditing({ ...editing, image_url: e.target.value })}
                 placeholder="https://..."
                 style={inputStyle}
@@ -140,7 +196,7 @@ export function AdminBlog() {
                 Extracto (resumen corto)
               </label>
               <textarea
-                value={editing.excerpt}
+                value={editing.excerpt || ''}
                 onChange={e => setEditing({ ...editing, excerpt: e.target.value })}
                 rows={2}
                 placeholder="Un resumen breve que aparece en la tarjeta..."
@@ -153,7 +209,7 @@ export function AdminBlog() {
                 Contenido completo
               </label>
               <textarea
-                value={editing.body}
+                value={editing.body || ''}
                 onChange={e => setEditing({ ...editing, body: e.target.value })}
                 rows={12}
                 placeholder="Escribe el contenido del post... Usa **texto** para negrita."
@@ -165,7 +221,7 @@ export function AdminBlog() {
               <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 14 }}>
                 <input
                   type="checkbox"
-                  checked={editing.is_visible}
+                  checked={editing.is_visible ?? false}
                   onChange={e => setEditing({ ...editing, is_visible: e.target.checked })}
                   style={{ accentColor: 'var(--hot)', width: 16, height: 16 }}
                 />
@@ -174,7 +230,9 @@ export function AdminBlog() {
             </div>
 
             <div style={{ display: 'flex', gap: 12 }}>
-              <Button onClick={handleSave}>Guardar</Button>
+              <Button onClick={handleSave} disabled={saving}>
+                {saving ? 'Guardando...' : 'Guardar'}
+              </Button>
               <button
                 onClick={() => setEditing(null)}
                 style={{
@@ -191,7 +249,7 @@ export function AdminBlog() {
         </div>
       )}
 
-      {saved && <p style={{ fontSize: 14, color: '#25D366', fontWeight: 600, marginBottom: 16 }}>✓ Post guardado</p>}
+      {feedback && <p style={{ fontSize: 14, color: '#25D366', fontWeight: 600, marginBottom: 16 }}>{'> '}{feedback}</p>}
 
       {/* Posts table */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -205,7 +263,7 @@ export function AdminBlog() {
           }}>
             <div style={{ flex: 1, minWidth: 0 }}>
               <p style={{ fontSize: 14, fontWeight: 600, color: 'var(--text)', marginBottom: 2 }}>
-                {post.title || '(Sin título)'}
+                {post.title || '(Sin titulo)'}
               </p>
               <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
                 <span style={{
@@ -220,7 +278,7 @@ export function AdminBlog() {
             </div>
 
             <button
-              onClick={() => toggleVisibility(post.id)}
+              onClick={() => toggleVisibility(post)}
               style={{
                 padding: '5px 12px', borderRadius: 'var(--r-pill)',
                 border: 'none', fontSize: 11, fontWeight: 700, cursor: 'pointer',

@@ -16,6 +16,8 @@ export interface SeedProduct {
   description: string;
   brand?: string;
   image_url?: string;
+  /** Optional array of additional product images (max 6). */
+  image_urls?: string[];
   is_visible: boolean;
   /** Dynamic filter labels — key is the group name, values are the tags */
   labels?: Record<string, string[]>;

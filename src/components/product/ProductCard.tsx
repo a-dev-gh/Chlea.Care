@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { Badge } from '../ui/Badge';
 import { useCart } from '../../hooks/useCart';
-import { useWishlist } from '../../hooks/useWishlist';
+import { useLists } from '../../hooks/useLists';
+import { ListPicker } from './ListPicker';
 import { formatPrice } from '../../utils/formatPrice';
 import type { SeedProduct } from '../../data/seedData';
 
@@ -23,8 +24,24 @@ const PLACEHOLDERS: Record<string, string> = {
 export function ProductCard({ product, isMen = false, onOpenModal }: ProductCardProps) {
   const addItem = useCart(s => s.addItem);
   const openCart = useCart(s => s.openCart);
-  const { isLiked, toggle } = useWishlist();
+  const lists = useLists(s => s.lists);
+  const toggleInList = useLists(s => s.toggleInList);
+  const isInAnyList = useLists(s => s.isInAnyList);
   const [adding, setAdding] = useState(false);
+  const [pickerOpen, setPickerOpen] = useState(false);
+
+  const liked = isInAnyList(product.id);
+
+  function handleHeartClick(e: React.MouseEvent) {
+    e.stopPropagation();
+    if (lists.length === 1) {
+      // Single list: direct toggle (same UX as before)
+      toggleInList(lists[0].id, product.id);
+    } else {
+      // Multiple lists: show picker
+      setPickerOpen(prev => !prev);
+    }
+  }
 
   const salePrice = product.sale_percent
     ? Math.round(product.price * (1 - product.sale_percent / 100))
@@ -65,15 +82,15 @@ export function ProductCard({ product, isMen = false, onOpenModal }: ProductCard
         (e.currentTarget as HTMLElement).style.boxShadow = 'var(--shadow-sm)';
       }}
     >
-      {/* Image area */}
+      {/* Image area — prefer first of image_urls, fall back to image_url */}
       <div style={{
         position: 'relative',
         height: 240,
-        background: product.image_url ? undefined : (PLACEHOLDERS[product.category] || PLACEHOLDERS.cabello),
+        background: (product.image_urls?.[0] || product.image_url) ? undefined : (PLACEHOLDERS[product.category] || PLACEHOLDERS.cabello),
         overflow: 'hidden',
       }}>
-        {product.image_url && (
-          <img src={product.image_url} alt={product.name}
+        {(product.image_urls?.[0] || product.image_url) && (
+          <img src={product.image_urls?.[0] || product.image_url!} alt={product.name}
             style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
         )}
 
@@ -85,25 +102,29 @@ export function ProductCard({ product, isMen = false, onOpenModal }: ProductCard
         )}
 
         {/* Wishlist top-right */}
-        <button
-          onClick={e => { e.stopPropagation(); toggle(product.id); }}
-          style={{
-            position: 'absolute', top: 10, right: 10,
-            background: 'rgba(255,255,255,0.85)',
-            border: 'none', borderRadius: '50%',
-            width: 32, height: 32,
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            cursor: 'pointer', transition: 'transform 0.2s',
-          }}
-          onMouseEnter={e => ((e.currentTarget as HTMLElement).style.transform = 'scale(1.15)')}
-          onMouseLeave={e => ((e.currentTarget as HTMLElement).style.transform = 'scale(1)')}
-        >
-          <svg width="15" height="15" viewBox="0 0 24 24"
-            fill={isLiked(product.id) ? 'var(--hot)' : 'none'}
-            stroke="var(--hot)" strokeWidth="2.2">
-            <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78L12 21.23l8.84-8.84a5.5 5.5 0 0 0 0-7.78z"/>
-          </svg>
-        </button>
+        <div style={{ position: 'absolute', top: 10, right: 10 }}>
+          <button
+            onClick={handleHeartClick}
+            style={{
+              background: 'rgba(255,255,255,0.85)',
+              border: 'none', borderRadius: '50%',
+              width: 32, height: 32,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              cursor: 'pointer', transition: 'transform 0.2s',
+            }}
+            onMouseEnter={e => ((e.currentTarget as HTMLElement).style.transform = 'scale(1.15)')}
+            onMouseLeave={e => ((e.currentTarget as HTMLElement).style.transform = 'scale(1)')}
+          >
+            <svg width="15" height="15" viewBox="0 0 24 24"
+              fill={liked ? 'var(--hot)' : 'none'}
+              stroke="var(--hot)" strokeWidth="2.2">
+              <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78L12 21.23l8.84-8.84a5.5 5.5 0 0 0 0-7.78z"/>
+            </svg>
+          </button>
+          {pickerOpen && (
+            <ListPicker productId={product.id} onClose={() => setPickerOpen(false)} />
+          )}
+        </div>
       </div>
 
       {/* Info — Sephora-style: brand bold, name, description, price + add */}

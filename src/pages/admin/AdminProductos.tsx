@@ -1,10 +1,210 @@
-import { useState } from 'react';
-import { SEED_PRODUCTS, type SeedProduct } from '../../data/seedData';
+import { useState, useEffect, useCallback } from 'react';
 import { formatPrice } from '../../utils/formatPrice';
 import { Badge } from '../../components/ui/Badge';
+import { Button } from '../../components/ui/Button';
+import { Modal } from '../../components/ui/Modal';
+import { adminFetch, adminInsert, adminUpdate, adminDelete } from '../../utils/adminApi';
+import { SEED_PRODUCTS } from '../../data/seedData';
+import { SEED_BRANDS } from '../../data/seedData';
+import { supabase } from '../../utils/supabase';
+import type { Product, Brand } from '../../types/database';
+
+// Seed fallback mapper (same as db.ts)
+function seedToProducts(): Product[] {
+  return SEED_PRODUCTS.map((p) => ({
+    id: p.id,
+    name: p.name,
+    price: p.price,
+    category: p.category as Product['category'],
+    badge: p.badge,
+    is_hot: p.is_hot,
+    sale_percent: p.sale_percent,
+    description: p.description,
+    brand_slug: p.brand
+      ? p.brand.toLowerCase().replace(/[&\s]+/g, '-').replace(/--+/g, '-')
+      : null,
+    image_url: p.image_url ?? '',
+    image_urls: p.image_urls ?? [],
+    is_visible: p.is_visible,
+    labels: p.labels ?? {},
+    created_at: new Date().toISOString(),
+  }));
+}
+
+function seedToBrands(): Brand[] {
+  return SEED_BRANDS.map((b, i) => ({
+    id: String(i + 1),
+    name: b.name,
+    slug: b.slug,
+    tagline: b.tagline,
+    logo_url: b.logo,
+    is_premier: i < 6,
+    category: 'hair' as Brand['category'],
+    created_at: new Date().toISOString(),
+  }));
+}
+
+const CATEGORIES = [
+  { value: 'cabello', label: 'Cabello' },
+  { value: 'skincare', label: 'Skincare' },
+  { value: 'accesorios', label: 'Accesorios' },
+  { value: 'hombres', label: 'Hombres' },
+];
+
+const EMPTY_PRODUCT: Partial<Product> = {
+  name: '',
+  price: 0,
+  category: 'cabello',
+  badge: '',
+  is_hot: false,
+  sale_percent: 0,
+  description: '',
+  brand_slug: null,
+  image_url: '',
+  image_urls: [],
+  is_visible: true,
+  labels: {},
+};
+
+// Shared input style
+const inputStyle: React.CSSProperties = {
+  width: '100%', padding: '10px 14px',
+  border: '1.5px solid var(--border2)', borderRadius: 'var(--r-sm)',
+  fontSize: 14, fontFamily: 'var(--font-body)', color: 'var(--text)',
+  outline: 'none', background: 'var(--white)',
+};
+
+const labelStyle: React.CSSProperties = {
+  display: 'block', fontSize: 11, fontWeight: 600,
+  color: 'var(--text-muted)', marginBottom: 6,
+  textTransform: 'uppercase', letterSpacing: 1,
+};
 
 export function AdminProductos() {
-  const [products] = useState<SeedProduct[]>(SEED_PRODUCTS);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [brands, setBrands] = useState<Brand[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [editing, setEditing] = useState<Partial<Product> | null>(null);
+  const [isNew, setIsNew] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
+
+  // Fetch products and brands
+  const loadData = useCallback(async () => {
+    setLoading(true);
+    const [prods, brnds] = await Promise.all([
+      adminFetch<Product>('products', { orderBy: 'created_at', ascending: false }),
+      adminFetch<Brand>('brands', { orderBy: 'name' }),
+    ]);
+    // If Supabase not configured, use seed data
+    setProducts(prods.length > 0 ? prods : seedToProducts());
+    setBrands(brnds.length > 0 ? brnds : seedToBrands());
+    setLoading(false);
+  }, []);
+
+  useEffect(() => { loadData(); }, [loadData]);
+
+  // Open create modal
+  function openNew() {
+    setEditing({ ...EMPTY_PRODUCT, image_urls: [] });
+    setIsNew(true);
+  }
+
+  // Open edit modal
+  function openEdit(product: Product) {
+    setEditing({ ...product, image_urls: product.image_urls ?? [] });
+    setIsNew(false);
+  }
+
+  // Save (create or update)
+  async function handleSave() {
+    if (!editing || !editing.name?.trim()) return;
+    setSaving(true);
+
+    if (supabase) {
+      if (isNew) {
+        const { id, created_at, ...rest } = editing as any;
+        const result = await adminInsert<Product>('products', rest);
+        if (result) await loadData();
+      } else {
+        const { id, created_at, ...rest } = editing as any;
+        await adminUpdate<Product>('products', editing.id as string, rest);
+        await loadData();
+      }
+    } else {
+      // Local-only fallback: update state directly
+      if (isNew) {
+        const newProd = { ...editing, id: String(Date.now()), created_at: new Date().toISOString() } as Product;
+        setProducts(prev => [newProd, ...prev]);
+      } else {
+        setProducts(prev => prev.map(p => p.id === editing.id ? { ...p, ...editing } as Product : p));
+      }
+    }
+
+    setSaving(false);
+    setEditing(null);
+  }
+
+  // Delete
+  async function handleDelete(id: string) {
+    if (supabase) {
+      const ok = await adminDelete('products', id);
+      if (ok) await loadData();
+    } else {
+      setProducts(prev => prev.filter(p => p.id !== id));
+    }
+    setConfirmDelete(null);
+  }
+
+  // Toggle visibility inline
+  async function toggleVisible(product: Product) {
+    const updated = { ...product, is_visible: !product.is_visible };
+    if (supabase) {
+      await adminUpdate<Product>('products', product.id, { is_visible: updated.is_visible } as any);
+      await loadData();
+    } else {
+      setProducts(prev => prev.map(p => p.id === product.id ? updated : p));
+    }
+  }
+
+  // Gallery image helpers
+  function addGallerySlot() {
+    if (!editing) return;
+    const urls = editing.image_urls ?? [];
+    if (urls.length >= 6) return;
+    setEditing({ ...editing, image_urls: [...urls, ''] });
+  }
+
+  function updateGalleryImage(index: number, value: string) {
+    if (!editing) return;
+    const urls = [...(editing.image_urls ?? [])];
+    urls[index] = value;
+    setEditing({ ...editing, image_urls: urls });
+  }
+
+  function removeGalleryImage(index: number) {
+    if (!editing) return;
+    const urls = (editing.image_urls ?? []).filter((_, i) => i !== index);
+    setEditing({ ...editing, image_urls: urls });
+  }
+
+  // Labels helper (JSON key-value editor)
+  function labelsToString(labels: Record<string, string[]> | undefined): string {
+    if (!labels || Object.keys(labels).length === 0) return '';
+    try { return JSON.stringify(labels, null, 2); } catch { return ''; }
+  }
+
+  function stringToLabels(str: string): Record<string, string[]> {
+    try { return JSON.parse(str); } catch { return {}; }
+  }
+
+  if (loading) {
+    return (
+      <div style={{ padding: 32, textAlign: 'center', color: 'var(--text-muted)' }}>
+        Cargando productos...
+      </div>
+    );
+  }
 
   return (
     <div style={{ padding: 32 }}>
@@ -13,7 +213,7 @@ export function AdminProductos() {
           <h1 style={{ fontFamily: 'var(--font-display)', fontSize: 28, fontWeight: 400, color: 'var(--text)' }}>Productos</h1>
           <p style={{ fontSize: 14, color: 'var(--text-muted)', marginTop: 4 }}>{products.length} productos</p>
         </div>
-        <button style={{
+        <button onClick={openNew} style={{
           background: 'var(--hot)', color: '#fff',
           border: 'none', borderRadius: 'var(--r-pill)',
           padding: '10px 22px', fontSize: 14, fontWeight: 600,
@@ -23,11 +223,12 @@ export function AdminProductos() {
         </button>
       </div>
 
+      {/* Products table */}
       <div style={{ background: 'var(--white)', borderRadius: 'var(--r-md)', border: '1px solid var(--border)', overflow: 'hidden' }}>
         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
           <thead>
             <tr style={{ borderBottom: '1px solid var(--border)', background: 'var(--cream)' }}>
-              {['Producto', 'Categoría', 'Precio', 'Badge', 'Oferta', 'Visible'].map(h => (
+              {['Producto', 'Categoría', 'Precio', 'Badge', 'Oferta', 'Visible', 'Acciones'].map(h => (
                 <th key={h} style={{ padding: '12px 16px', fontSize: 11, fontWeight: 700, letterSpacing: 1, textTransform: 'uppercase', color: 'var(--text-muted)', textAlign: 'left' }}>
                   {h}
                 </th>
@@ -39,21 +240,24 @@ export function AdminProductos() {
               <tr key={p.id} style={{
                 borderBottom: i < products.length - 1 ? '1px solid var(--border)' : 'none',
                 transition: 'background 0.15s',
-                cursor: 'pointer',
               }}
                 onMouseEnter={e => ((e.currentTarget as HTMLElement).style.background = 'rgba(235,25,130,0.03)')}
                 onMouseLeave={e => ((e.currentTarget as HTMLElement).style.background = 'transparent')}
               >
                 <td style={{ padding: '14px 16px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                    <div style={{
-                      width: 40, height: 40, borderRadius: 8,
-                      background: 'linear-gradient(135deg,#ffd6e7,#ffb3cb)',
-                      flexShrink: 0,
-                    }} />
+                    {p.image_url ? (
+                      <img src={p.image_url} alt="" style={{ width: 40, height: 40, borderRadius: 8, objectFit: 'cover', flexShrink: 0 }} />
+                    ) : (
+                      <div style={{
+                        width: 40, height: 40, borderRadius: 8,
+                        background: 'linear-gradient(135deg,#ffd6e7,#ffb3cb)',
+                        flexShrink: 0,
+                      }} />
+                    )}
                     <div>
                       <p style={{ fontSize: 14, fontWeight: 600, color: 'var(--text)' }}>{p.name}</p>
-                      <p style={{ fontSize: 12, color: 'var(--text-muted)' }}>{p.brand}</p>
+                      <p style={{ fontSize: 12, color: 'var(--text-muted)' }}>{p.brand_slug || '—'}</p>
                     </div>
                   </div>
                 </td>
@@ -70,12 +274,15 @@ export function AdminProductos() {
                   {p.sale_percent > 0 ? `${p.sale_percent}%` : '—'}
                 </td>
                 <td style={{ padding: '14px 16px' }}>
-                  <div style={{
-                    width: 36, height: 20, borderRadius: 10,
-                    background: p.is_visible ? 'var(--hot)' : 'var(--border2)',
-                    position: 'relative', cursor: 'pointer',
-                    transition: 'background 0.2s',
-                  }}>
+                  <div
+                    onClick={() => toggleVisible(p)}
+                    style={{
+                      width: 36, height: 20, borderRadius: 10,
+                      background: p.is_visible ? 'var(--hot)' : 'var(--border2)',
+                      position: 'relative', cursor: 'pointer',
+                      transition: 'background 0.2s',
+                    }}
+                  >
                     <div style={{
                       position: 'absolute', top: 2,
                       left: p.is_visible ? 18 : 2,
@@ -84,11 +291,245 @@ export function AdminProductos() {
                     }} />
                   </div>
                 </td>
+                <td style={{ padding: '14px 16px' }}>
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    <button onClick={() => openEdit(p)} style={{
+                      padding: '5px 12px', borderRadius: 'var(--r-sm)',
+                      border: '1px solid var(--border2)', background: 'none',
+                      fontSize: 12, fontWeight: 600, color: 'var(--text-soft)',
+                      cursor: 'pointer', fontFamily: 'var(--font-body)',
+                    }}>
+                      Editar
+                    </button>
+                    <button onClick={() => setConfirmDelete(p.id)} style={{
+                      padding: '5px 12px', borderRadius: 'var(--r-sm)',
+                      border: '1px solid rgba(239,68,68,0.3)', background: 'none',
+                      fontSize: 12, fontWeight: 600, color: '#ef4444',
+                      cursor: 'pointer', fontFamily: 'var(--font-body)',
+                    }}>
+                      Eliminar
+                    </button>
+                  </div>
+                </td>
               </tr>
             ))}
           </tbody>
         </table>
       </div>
+
+      {/* Delete Confirmation Modal */}
+      <Modal open={!!confirmDelete} onClose={() => setConfirmDelete(null)} maxWidth={400}>
+        <div style={{ padding: 28, textAlign: 'center' }}>
+          <h3 style={{ fontFamily: 'var(--font-display)', fontSize: 22, fontWeight: 400, marginBottom: 12 }}>
+            Eliminar producto
+          </h3>
+          <p style={{ fontSize: 14, color: 'var(--text-muted)', marginBottom: 24, lineHeight: 1.5 }}>
+            Esta accion no se puede deshacer. El producto sera eliminado permanentemente.
+          </p>
+          <div style={{ display: 'flex', gap: 12 }}>
+            <Button onClick={() => confirmDelete && handleDelete(confirmDelete)} style={{ background: '#ef4444' }} fullWidth>
+              Eliminar
+            </Button>
+            <Button onClick={() => setConfirmDelete(null)} variant="outline" fullWidth>
+              Cancelar
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Create / Edit Modal */}
+      <Modal open={!!editing} onClose={() => setEditing(null)} maxWidth={600}>
+        {editing && (
+          <div style={{ padding: 28 }}>
+            <h3 style={{ fontFamily: 'var(--font-display)', fontSize: 24, fontWeight: 400, marginBottom: 24 }}>
+              {isNew ? 'Nuevo Producto' : 'Editar Producto'}
+            </h3>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+              {/* Name */}
+              <div>
+                <label style={labelStyle}>Nombre</label>
+                <input
+                  value={editing.name || ''}
+                  onChange={e => setEditing({ ...editing, name: e.target.value })}
+                  placeholder="Ej: OI All In One Milk"
+                  style={inputStyle}
+                />
+              </div>
+
+              {/* Price + Sale */}
+              <div style={{ display: 'flex', gap: 16 }}>
+                <div style={{ flex: 1 }}>
+                  <label style={labelStyle}>Precio (RD$)</label>
+                  <input
+                    type="number" min={0}
+                    value={editing.price || 0}
+                    onChange={e => setEditing({ ...editing, price: Number(e.target.value) })}
+                    style={inputStyle}
+                  />
+                </div>
+                <div style={{ flex: 1 }}>
+                  <label style={labelStyle}>Descuento (%)</label>
+                  <input
+                    type="number" min={0} max={100}
+                    value={editing.sale_percent || 0}
+                    onChange={e => setEditing({ ...editing, sale_percent: Number(e.target.value) })}
+                    style={inputStyle}
+                  />
+                </div>
+              </div>
+
+              {/* Category + Brand */}
+              <div style={{ display: 'flex', gap: 16 }}>
+                <div style={{ flex: 1 }}>
+                  <label style={labelStyle}>Categoria</label>
+                  <select
+                    value={editing.category || 'cabello'}
+                    onChange={e => setEditing({ ...editing, category: e.target.value as Product['category'] })}
+                    style={{ ...inputStyle, cursor: 'pointer' }}
+                  >
+                    {CATEGORIES.map(c => (
+                      <option key={c.value} value={c.value}>{c.label}</option>
+                    ))}
+                  </select>
+                </div>
+                <div style={{ flex: 1 }}>
+                  <label style={labelStyle}>Marca</label>
+                  <select
+                    value={editing.brand_slug || ''}
+                    onChange={e => setEditing({ ...editing, brand_slug: e.target.value || null })}
+                    style={{ ...inputStyle, cursor: 'pointer' }}
+                  >
+                    <option value="">Sin marca</option>
+                    {brands.map(b => (
+                      <option key={b.slug} value={b.slug}>{b.name}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              {/* Badge */}
+              <div>
+                <label style={labelStyle}>Badge</label>
+                <input
+                  value={editing.badge || ''}
+                  onChange={e => setEditing({ ...editing, badge: e.target.value })}
+                  placeholder="Ej: Bestseller, Nuevo, Top Rated"
+                  style={inputStyle}
+                />
+              </div>
+
+              {/* Description */}
+              <div>
+                <label style={labelStyle}>Descripcion</label>
+                <textarea
+                  value={editing.description || ''}
+                  onChange={e => setEditing({ ...editing, description: e.target.value })}
+                  rows={3}
+                  placeholder="Descripcion del producto..."
+                  style={{ ...inputStyle, resize: 'vertical' }}
+                />
+              </div>
+
+              {/* Main image URL */}
+              <div>
+                <label style={labelStyle}>Imagen principal (URL)</label>
+                <input
+                  value={editing.image_url || ''}
+                  onChange={e => setEditing({ ...editing, image_url: e.target.value })}
+                  placeholder="https://..."
+                  style={inputStyle}
+                />
+              </div>
+
+              {/* Gallery images */}
+              <div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                  <label style={{ ...labelStyle, marginBottom: 0 }}>Galeria de imagenes (max 6)</label>
+                  {(editing.image_urls?.length ?? 0) < 6 && (
+                    <button onClick={addGallerySlot} style={{
+                      padding: '3px 10px', borderRadius: 'var(--r-pill)',
+                      border: '1px solid var(--hot)', background: 'rgba(235,25,130,0.06)',
+                      color: 'var(--hot)', fontSize: 11, fontWeight: 700,
+                      cursor: 'pointer', fontFamily: 'var(--font-body)',
+                    }}>
+                      + Imagen
+                    </button>
+                  )}
+                </div>
+                {(editing.image_urls ?? []).map((url, idx) => (
+                  <div key={idx} style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
+                    <input
+                      value={url}
+                      onChange={e => updateGalleryImage(idx, e.target.value)}
+                      placeholder={`URL imagen ${idx + 1}`}
+                      style={{ ...inputStyle, flex: 1 }}
+                    />
+                    <button onClick={() => removeGalleryImage(idx)} style={{
+                      background: 'none', border: '1px solid rgba(239,68,68,0.3)',
+                      borderRadius: 'var(--r-sm)', color: '#ef4444',
+                      padding: '0 10px', cursor: 'pointer', fontSize: 16,
+                    }}>
+                      x
+                    </button>
+                  </div>
+                ))}
+              </div>
+
+              {/* Toggles row */}
+              <div style={{ display: 'flex', gap: 24 }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 14, color: 'var(--text-soft)' }}>
+                  <input
+                    type="checkbox"
+                    checked={editing.is_hot || false}
+                    onChange={e => setEditing({ ...editing, is_hot: e.target.checked })}
+                    style={{ accentColor: 'var(--hot)', width: 16, height: 16 }}
+                  />
+                  Producto hot / trending
+                </label>
+                <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 14, color: 'var(--text-soft)' }}>
+                  <input
+                    type="checkbox"
+                    checked={editing.is_visible ?? true}
+                    onChange={e => setEditing({ ...editing, is_visible: e.target.checked })}
+                    style={{ accentColor: 'var(--hot)', width: 16, height: 16 }}
+                  />
+                  Visible en la tienda
+                </label>
+              </div>
+
+              {/* Labels (JSON editor) */}
+              <div>
+                <label style={labelStyle}>
+                  Etiquetas (JSON)
+                </label>
+                <p style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 8 }}>
+                  Formato: {`{"Tipo de Cabello": ["Rizado", "Lacio"], "Preocupaciones": ["Frizz"]}`}
+                </p>
+                <textarea
+                  defaultValue={labelsToString(editing.labels)}
+                  onBlur={e => {
+                    const parsed = stringToLabels(e.target.value);
+                    setEditing(prev => ({ ...prev, labels: parsed }));
+                  }}
+                  rows={4}
+                  placeholder='{"Tipo de Cabello": ["Todo Tipo"]}'
+                  style={{ ...inputStyle, resize: 'vertical', fontFamily: 'monospace', fontSize: 13 }}
+                />
+              </div>
+
+              {/* Actions */}
+              <div style={{ display: 'flex', gap: 12, marginTop: 8 }}>
+                <Button onClick={handleSave} disabled={saving} fullWidth>
+                  {saving ? 'Guardando...' : isNew ? 'Crear Producto' : 'Guardar cambios'}
+                </Button>
+                <Button onClick={() => setEditing(null)} variant="outline" fullWidth>
+                  Cancelar
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
+      </Modal>
     </div>
   );
 }

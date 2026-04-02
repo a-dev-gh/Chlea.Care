@@ -1,66 +1,124 @@
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Button } from '../../components/ui/Button';
 import { Modal } from '../../components/ui/Modal';
+import { adminFetch, adminInsert, adminUpdate, adminDelete } from '../../utils/adminApi';
+import { supabase } from '../../utils/supabase';
+import type { InstagramPost } from '../../types/database';
 
-interface SocialPost {
-  id: string;
-  url: string;
-  type: 'post' | 'reel';
-  visible: boolean;
-}
-
-const INITIAL_POSTS: SocialPost[] = [
-  { id: '1', url: 'https://www.instagram.com/p/DWEnZb4jn5w/', type: 'post', visible: true },
-  { id: '2', url: 'https://www.instagram.com/p/DPo41_dDkWh/', type: 'reel', visible: true },
-  { id: '3', url: 'https://www.instagram.com/p/DGmNg0PPvCM/', type: 'post', visible: true },
+// Seed posts fallback (no DB table yet)
+const SEED_POSTS: InstagramPost[] = [
+  { id: '1', url: 'https://www.instagram.com/p/DWEnZb4jn5w/', type: 'post', is_visible: true, sort_order: 0, created_at: '' },
+  { id: '2', url: 'https://www.instagram.com/p/DPo41_dDkWh/', type: 'reel', is_visible: true, sort_order: 1, created_at: '' },
+  { id: '3', url: 'https://www.instagram.com/p/DGmNg0PPvCM/', type: 'post', is_visible: true, sort_order: 2, created_at: '' },
 ];
 
 export function AdminSocial() {
-  const [posts, setPosts] = useState<SocialPost[]>(INITIAL_POSTS);
-  const [editing, setEditing] = useState<SocialPost | null>(null);
+  const [posts, setPosts] = useState<InstagramPost[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [editing, setEditing] = useState<Partial<InstagramPost> | null>(null);
   const [isNew, setIsNew] = useState(false);
+  const [saving, setSaving] = useState(false);
+
+  const loadPosts = useCallback(async () => {
+    setLoading(true);
+    const data = await adminFetch<InstagramPost>('instagram_posts', { orderBy: 'sort_order' });
+    setPosts(data.length > 0 ? data : [...SEED_POSTS]);
+    setLoading(false);
+  }, []);
+
+  useEffect(() => { loadPosts(); }, [loadPosts]);
 
   function openNew() {
-    setEditing({ id: Date.now().toString(), url: '', type: 'post', visible: true });
+    setEditing({ url: '', type: 'post', is_visible: true, sort_order: posts.length });
     setIsNew(true);
   }
 
-  function openEdit(post: SocialPost) {
+  function openEdit(post: InstagramPost) {
     setEditing({ ...post });
     setIsNew(false);
   }
 
-  function handleSave() {
-    if (!editing || !editing.url.trim()) return;
-    if (isNew) {
-      setPosts(prev => [...prev, editing]);
+  async function handleSave() {
+    if (!editing || !editing.url?.trim()) return;
+    setSaving(true);
+
+    if (supabase) {
+      if (isNew) {
+        await adminInsert<InstagramPost>('instagram_posts', editing);
+      } else {
+        const { id, created_at, ...rest } = editing as any;
+        await adminUpdate<InstagramPost>('instagram_posts', editing.id!, rest);
+      }
+      await loadPosts();
     } else {
-      setPosts(prev => prev.map(p => p.id === editing.id ? editing : p));
+      // Local fallback
+      if (isNew) {
+        const newPost = { ...editing, id: String(Date.now()), created_at: new Date().toISOString() } as InstagramPost;
+        setPosts(prev => [...prev, newPost]);
+      } else {
+        setPosts(prev => prev.map(p => p.id === editing.id ? { ...p, ...editing } as InstagramPost : p));
+      }
     }
+
+    setSaving(false);
     setEditing(null);
-    // TODO: save to Supabase
   }
 
-  function handleDelete(id: string) {
-    setPosts(prev => prev.filter(p => p.id !== id));
+  async function handleDelete(id: string) {
+    if (supabase) {
+      const ok = await adminDelete('instagram_posts', id);
+      if (ok) await loadPosts();
+    } else {
+      setPosts(prev => prev.filter(p => p.id !== id));
+    }
   }
 
-  function moveUp(i: number) {
+  // Reorder helpers
+  async function moveUp(i: number) {
     if (i === 0) return;
-    setPosts(prev => {
-      const next = [...prev];
-      [next[i - 1], next[i]] = [next[i], next[i - 1]];
-      return next;
-    });
+    const next = [...posts];
+    [next[i - 1], next[i]] = [next[i], next[i - 1]];
+    // Update sort_order values
+    const updated = next.map((p, idx) => ({ ...p, sort_order: idx }));
+    setPosts(updated);
+
+    if (supabase) {
+      // Update both swapped items
+      await Promise.all([
+        adminUpdate('instagram_posts', updated[i].id, { sort_order: i }),
+        adminUpdate('instagram_posts', updated[i - 1].id, { sort_order: i - 1 }),
+      ]);
+    }
   }
 
-  function moveDown(i: number) {
+  async function moveDown(i: number) {
     if (i >= posts.length - 1) return;
-    setPosts(prev => {
-      const next = [...prev];
-      [next[i], next[i + 1]] = [next[i + 1], next[i]];
-      return next;
-    });
+    const next = [...posts];
+    [next[i], next[i + 1]] = [next[i + 1], next[i]];
+    const updated = next.map((p, idx) => ({ ...p, sort_order: idx }));
+    setPosts(updated);
+
+    if (supabase) {
+      await Promise.all([
+        adminUpdate('instagram_posts', updated[i].id, { sort_order: i }),
+        adminUpdate('instagram_posts', updated[i + 1].id, { sort_order: i + 1 }),
+      ]);
+    }
+  }
+
+  // Toggle visibility
+  async function toggleVisible(post: InstagramPost) {
+    const newVal = !post.is_visible;
+    if (supabase) {
+      await adminUpdate('instagram_posts', post.id, { is_visible: newVal });
+      await loadPosts();
+    } else {
+      setPosts(prev => prev.map(p => p.id === post.id ? { ...p, is_visible: newVal } : p));
+    }
+  }
+
+  if (loading) {
+    return <div style={{ padding: 32, textAlign: 'center', color: 'var(--text-muted)' }}>Cargando posts...</div>;
   }
 
   return (
@@ -69,7 +127,7 @@ export function AdminSocial() {
         <div>
           <h1 style={{ fontFamily: 'var(--font-display)', fontSize: 28, fontWeight: 400, color: 'var(--text)' }}>Redes Sociales</h1>
           <p style={{ fontSize: 14, color: 'var(--text-muted)', marginTop: 4 }}>
-            Administra los posts de Instagram que se muestran en la página principal. Se recomiendan 6 posts (2 filas de 3).
+            Administra los posts de Instagram que se muestran en la pagina principal. Se recomiendan 6 posts (2 filas de 3).
           </p>
         </div>
         <button onClick={openNew} style={{
@@ -78,7 +136,7 @@ export function AdminSocial() {
           padding: '10px 22px', fontSize: 14, fontWeight: 600,
           fontFamily: 'var(--font-body)', cursor: 'pointer',
         }}>
-          + Añadir Post
+          + Anadir Post
         </button>
       </div>
 
@@ -89,7 +147,7 @@ export function AdminSocial() {
             display: 'flex', alignItems: 'center', gap: 16,
             background: 'var(--white)', border: '1px solid var(--border)',
             borderRadius: 'var(--r-md)', padding: '16px 20px',
-            opacity: post.visible ? 1 : 0.5,
+            opacity: post.is_visible ? 1 : 0.5,
           }}>
             {/* Order controls */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: 2, flexShrink: 0 }}>
@@ -98,13 +156,13 @@ export function AdminSocial() {
                 borderRadius: 4, width: 24, height: 24, cursor: 'pointer',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 color: 'var(--text-muted)', fontSize: 12,
-              }}>↑</button>
+              }}>^</button>
               <button onClick={() => moveDown(i)} style={{
                 background: 'none', border: '1px solid var(--border2)',
                 borderRadius: 4, width: 24, height: 24, cursor: 'pointer',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 color: 'var(--text-muted)', fontSize: 12,
-              }}>↓</button>
+              }}>v</button>
             </div>
 
             {/* Position badge */}
@@ -127,6 +185,17 @@ export function AdminSocial() {
                 }}>
                   {post.type}
                 </span>
+                <button
+                  onClick={() => toggleVisible(post)}
+                  style={{
+                    padding: '2px 8px', borderRadius: 'var(--r-pill)',
+                    border: 'none', fontSize: 10, fontWeight: 700, cursor: 'pointer',
+                    background: post.is_visible ? 'rgba(37,211,102,0.1)' : 'rgba(0,0,0,0.05)',
+                    color: post.is_visible ? '#25D366' : 'var(--text-muted)',
+                  }}
+                >
+                  {post.is_visible ? 'Visible' : 'Oculto'}
+                </button>
               </div>
               <p style={{
                 fontSize: 13, color: 'var(--text-soft)',
@@ -153,7 +222,7 @@ export function AdminSocial() {
                 fontSize: 12, fontWeight: 600, color: '#ef4444',
                 cursor: 'pointer', fontFamily: 'var(--font-body)',
               }}>
-                ✕
+                x
               </button>
             </div>
           </div>
@@ -164,8 +233,7 @@ export function AdminSocial() {
             background: 'var(--white)', border: '1px solid var(--border)',
             borderRadius: 'var(--r-md)', padding: '60px 24px', textAlign: 'center',
           }}>
-            <div style={{ fontSize: 48, marginBottom: 12 }}>📸</div>
-            <p style={{ color: 'var(--text-muted)', fontSize: 15 }}>No hay posts agregados aún</p>
+            <p style={{ color: 'var(--text-muted)', fontSize: 15 }}>No hay posts agregados aun</p>
           </div>
         )}
       </div>
@@ -175,7 +243,7 @@ export function AdminSocial() {
         {editing && (
           <div style={{ padding: '28px' }}>
             <h3 style={{ fontFamily: 'var(--font-display)', fontSize: 24, fontWeight: 400, marginBottom: 24 }}>
-              {isNew ? 'Añadir Post' : 'Editar Post'}
+              {isNew ? 'Anadir Post' : 'Editar Post'}
             </h3>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
               <div>
@@ -183,7 +251,7 @@ export function AdminSocial() {
                   URL de Instagram
                 </label>
                 <input
-                  type="url" value={editing.url}
+                  type="url" value={editing.url || ''}
                   onChange={e => setEditing({ ...editing, url: e.target.value })}
                   placeholder="https://www.instagram.com/p/..."
                   style={{
@@ -213,7 +281,7 @@ export function AdminSocial() {
                         textTransform: 'capitalize',
                       }}
                     >
-                      {type === 'reel' ? '🎬 Reel' : '📸 Post'}
+                      {type === 'reel' ? 'Reel' : 'Post'}
                     </button>
                   ))}
                 </div>
@@ -221,15 +289,15 @@ export function AdminSocial() {
               <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', fontSize: 14, color: 'var(--text-soft)' }}>
                 <input
                   type="checkbox"
-                  checked={editing.visible}
-                  onChange={e => setEditing({ ...editing, visible: e.target.checked })}
+                  checked={editing.is_visible ?? true}
+                  onChange={e => setEditing({ ...editing, is_visible: e.target.checked })}
                   style={{ accentColor: 'var(--hot)', width: 16, height: 16 }}
                 />
-                Visible en la página principal
+                Visible en la pagina principal
               </label>
               <div style={{ display: 'flex', gap: 12, marginTop: 8 }}>
-                <Button onClick={handleSave} fullWidth>
-                  {isNew ? 'Añadir' : 'Guardar'}
+                <Button onClick={handleSave} disabled={saving} fullWidth>
+                  {saving ? 'Guardando...' : isNew ? 'Anadir' : 'Guardar'}
                 </Button>
                 <Button onClick={() => setEditing(null)} variant="outline" fullWidth>
                   Cancelar

@@ -18,6 +18,8 @@ const MENU_LINKS = [
   { label: 'Catálogo', href: '/catalogo' },
   { label: 'Marcas', href: '/marcas', expandable: true },
   { label: 'Hombres', href: '/hombres' },
+  { label: 'Políticas de Envío', href: '/politicas-envio' },
+  { label: 'Políticas de Reembolso', href: '/politicas-reembolso' },
 ];
 
 export function TopNav() {

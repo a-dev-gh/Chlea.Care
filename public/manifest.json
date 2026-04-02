@@ -1,0 +1,12 @@
+{
+  "name": "Chlea Care",
+  "short_name": "Chlea Care",
+  "description": "Premium Beauty & Lifestyle - Santo Domingo, RD",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#fff5f9",
+  "theme_color": "#EB1982",
+  "icons": [
+    { "src": "/chleacare-icon.svg", "sizes": "any", "type": "image/svg+xml" }
+  ]
+}

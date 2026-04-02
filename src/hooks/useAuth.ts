@@ -9,6 +9,7 @@ interface AuthState {
   role: Role;
   loading: boolean;
   signIn: (email: string, password: string) => Promise<{ error: string | null }>;
+  signUp: (email: string, password: string) => Promise<{ error: string | null }>;
   signOut: () => Promise<void>;
 }
 
@@ -53,6 +54,12 @@ export function useAuth(): AuthState {
     return { error: error?.message ?? null };
   }
 
+  async function signUp(email: string, password: string) {
+    if (!supabase) return { error: 'Supabase not configured' };
+    const { error } = await supabase.auth.signUp({ email, password });
+    return { error: error?.message ?? null };
+  }
+
   async function signOut() {
     if (!supabase) return;
     await supabase.auth.signOut();
@@ -60,5 +67,5 @@ export function useAuth(): AuthState {
     setRole(null);
   }
 
-  return { user, role, loading, signIn, signOut };
+  return { user, role, loading, signIn, signUp, signOut };
 }

@@ -34,7 +34,7 @@ const TABS = [
     ),
   },
   {
-    label: 'Mis Listas', href: '/catalogo',
+    label: 'Mis Listas', href: '/mis-listas',
     icon: (active: boolean) => (
       <svg width="22" height="22" viewBox="0 0 24 24"
         fill={active ? 'var(--hot)' : 'none'}

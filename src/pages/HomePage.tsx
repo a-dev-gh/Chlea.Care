@@ -4,6 +4,8 @@ import { useSiteSettings } from '../hooks/useSiteSettings';
 import { ProductGrid } from '../components/product/ProductGrid';
 import { SEED_PRODUCTS } from '../data/seedData';
 import { BrandsCarousel } from '../components/BrandsCarousel';
+import { TestimonialsCarousel } from '../components/TestimonialsCarousel';
+import { OrderProcess } from '../components/OrderProcess';
 import { InstagramModal, getEmbedUrl } from '../components/InstagramModal';
 
 // Managed from admin — Denise can add/remove/reorder these
@@ -272,11 +274,13 @@ export function HomePage() {
                 overflow: 'hidden',
                 boxShadow: '0 0 0 5px var(--pink), 0 12px 40px rgba(235,25,130,0.18)',
                 margin: '0 auto 14px',
-                background: 'linear-gradient(135deg, var(--pink), #ffd6e7)',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
               }}>
-                {/* Placeholder — replace with real photo */}
-                <span style={{ fontSize: 48, opacity: 0.5 }}>👩🏽</span>
+                <img
+                  src="/cleo-photo.webp"
+                  alt="Cleo Garcia"
+                  style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center 15%' }}
+                />
               </div>
               <p style={{ fontFamily: 'var(--font-display)', fontSize: 18, fontWeight: 400, fontStyle: 'italic', color: 'var(--text)' }}>
                 Cleo Garcia
@@ -296,7 +300,7 @@ export function HomePage() {
                 margin: '0 auto 14px',
               }}>
                 <img
-                  src="/about-photo.webp"
+                  src="/denise-photo.webp"
                   alt="Denisee Ventura"
                   style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center 15%' }}
                 />
@@ -326,6 +330,14 @@ export function HomePage() {
           .about-orbs > div > div:first-child { width: 160px !important; height: 160px !important; }
         }`}</style>
       </section>
+
+      {/* ── Testimonials Carousel — continuous with About section ── */}
+      <section style={{ background: 'var(--white)', paddingBottom: 48 }}>
+        <TestimonialsCarousel />
+      </section>
+
+      {/* ── Order Process — How it works ── */}
+      <OrderProcess />
 
       {/* ── Promo Editorial — Full-bleed hair sections ── */}
       {[
@@ -567,6 +579,7 @@ export function HomePage() {
               {/* Instagram embed iframe — offset to hide IG chrome, show content */}
               <iframe
                 src={getEmbedUrl(post.url)}
+                sandbox="allow-scripts allow-same-origin"
                 scrolling="no"
                 style={{
                   position: 'absolute',

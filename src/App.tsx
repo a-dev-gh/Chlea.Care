@@ -21,6 +21,13 @@ import { AdminNavegacion } from './pages/admin/AdminNavegacion';
 import { AdminBlog } from './pages/admin/AdminBlog';
 import { BlogPage } from './pages/BlogPage';
 import { BlogPostPage } from './pages/BlogPostPage';
+import { PoliticasEnvioPage } from './pages/PoliticasEnvioPage';
+import { PoliticasReembolsoPage } from './pages/PoliticasReembolsoPage';
+import { MisListasPage } from './pages/MisListasPage';
+import { CartPage } from './pages/CartPage';
+import { NotFoundPage } from './pages/NotFoundPage';
+import { WhatsAppFloat } from './components/WhatsAppFloat';
+import { BackToTop } from './components/ui/BackToTop';
 
 function PublicLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -34,11 +41,37 @@ function PublicLayout({ children }: { children: React.ReactNode }) {
       <Footer />
       <BottomNav />
       <CartDrawer />
+      <WhatsAppFloat />
+      <BackToTop />
     </div>
   );
 }
 
+// Detect estudio.chlea.care subdomain for dedicated admin panel
+const isStudio =
+  window.location.hostname === 'estudio.chlea.care' ||
+  window.location.hostname.startsWith('estudio.');
+
 export default function App() {
+  // Studio subdomain: render only admin routes at root path
+  if (isStudio) {
+    return (
+      <Routes>
+        <Route path="/" element={<AdminLayout />}>
+          <Route index element={<Navigate to="/productos" replace />} />
+          <Route path="productos" element={<AdminProductos />} />
+          <Route path="marcas" element={<AdminMarcas />} />
+          <Route path="ordenes" element={<AdminOrdenes />} />
+          <Route path="social" element={<AdminSocial />} />
+          <Route path="navegacion" element={<AdminNavegacion />} />
+          <Route path="blog" element={<AdminBlog />} />
+          <Route path="configuracion" element={<AdminConfiguracion />} />
+        </Route>
+        <Route path="*" element={<Navigate to="/productos" replace />} />
+      </Routes>
+    );
+  }
+
   return (
     <Routes>
       {/* Public routes */}
@@ -50,8 +83,12 @@ export default function App() {
       <Route path="/cuenta" element={<PublicLayout><AccountPage /></PublicLayout>} />
       <Route path="/blog" element={<PublicLayout><BlogPage /></PublicLayout>} />
       <Route path="/blog/:slug" element={<PublicLayout><BlogPostPage /></PublicLayout>} />
+      <Route path="/politicas-envio" element={<PublicLayout><PoliticasEnvioPage /></PublicLayout>} />
+      <Route path="/politicas-reembolso" element={<PublicLayout><PoliticasReembolsoPage /></PublicLayout>} />
+      <Route path="/mis-listas" element={<PublicLayout><MisListasPage /></PublicLayout>} />
+      <Route path="/carrito" element={<PublicLayout><CartPage /></PublicLayout>} />
 
-      {/* Admin routes */}
+      {/* Admin routes (backward compatible, also for localhost testing) */}
       <Route path="/admin" element={<AdminLayout />}>
         <Route index element={<Navigate to="/admin/productos" replace />} />
         <Route path="productos"     element={<AdminProductos />} />
@@ -64,7 +101,7 @@ export default function App() {
       </Route>
 
       {/* 404 */}
-      <Route path="*" element={<Navigate to="/" replace />} />
+      <Route path="*" element={<PublicLayout><NotFoundPage /></PublicLayout>} />
     </Routes>
   );
 }

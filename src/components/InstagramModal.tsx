@@ -96,6 +96,7 @@ export function InstagramModal({ url, type, onClose }: InstagramModalProps) {
         }}>
           <iframe
             src={getEmbedUrl(url)}
+            sandbox="allow-scripts allow-same-origin"
             style={{
               width: '100%',
               height: '100%',
