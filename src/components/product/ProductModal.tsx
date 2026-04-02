@@ -31,9 +31,8 @@ interface Review {
 }
 
 const PLACEHOLDER_REVIEWS: Review[] = [
-  { name: 'Maria R.', rating: 5, text: 'Este producto es increíble, mi cabello nunca se había visto tan bien.', date: '2025-03-15', photo: '' },
-  { name: 'Laura G.', rating: 4, text: 'Muy bueno, aunque tarda un poco en hacer efecto. Lo recomiendo.', date: '2025-03-10', photo: '' },
-  { name: 'Carmen D.', rating: 5, text: 'Lo uso todas las semanas. El mejor tratamiento que he probado.', date: '2025-02-28', photo: '' },
+  { name: 'Adrian A.', rating: 5, text: 'Excelente calidad de productos. La atención por WhatsApp es súper rápida y personalizada.', date: '2025-03-20', photo: '' },
+  { name: 'Angelis R.', rating: 5, text: 'Me encanta la variedad de marcas profesionales. Mis favoritos son los tratamientos capilares.', date: '2025-03-15', photo: '' },
 ];
 
 // ---------------------------------------------------------------------------

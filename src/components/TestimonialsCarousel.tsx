@@ -5,10 +5,8 @@
  */
 
 const PLACEHOLDER_TESTIMONIALS = [
-  { name: 'María R.', rating: 5, text: 'Los productos de Chlea Care transformaron mi cabello. ¡Increíble servicio!', photo: '' },
-  { name: 'Laura G.', rating: 5, text: 'Envío súper rápido y los productos son originales. Mi tienda favorita.', photo: '' },
-  { name: 'Carmen D.', rating: 4, text: 'Excelente atención por WhatsApp. Denisee siempre me ayuda a elegir.', photo: '' },
-  { name: 'Ana P.', rating: 5, text: 'La mejor selección de marcas profesionales en RD. 100% recomendado.', photo: '' },
+  { name: 'Adrian A.', rating: 5, text: 'Excelente calidad de productos y atención personalizada. La mejor tienda de belleza en RD.', photo: '' },
+  { name: 'Angelis R.', rating: 5, text: 'Me encanta la variedad de marcas profesionales. Siempre encuentro lo que necesito para mi cabello.', photo: '' },
 ];
 
 function StarRating({ count }: { count: number }) {

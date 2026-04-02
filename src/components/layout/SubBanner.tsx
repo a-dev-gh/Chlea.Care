@@ -7,9 +7,10 @@ export function SubBanner() {
   const [visible, setVisible] = useState(true);
 
   const messages = [
-    '📱 +1 (809) 775-6773 · WhatsApp',
+    '📱 +1 (809) 451-7690 · WhatsApp',
+    'Envío a todo el país 🚚',
+    'Siempre productos nuevos y de calidad ✨',
     settings.banner_text,
-    'Con amor, por Denisee Ventura 🩷',
   ];
 
   useEffect(() => {

@@ -7,7 +7,7 @@ export interface CartItem {
   quantity: number;
 }
 
-const WA_NUMBER = import.meta.env.VITE_WA_NUMBER || '18097756773';
+const WA_NUMBER = import.meta.env.VITE_WA_NUMBER || '18094517690';
 
 export function buildCartMessage(items: CartItem[]): string {
   const lines = items

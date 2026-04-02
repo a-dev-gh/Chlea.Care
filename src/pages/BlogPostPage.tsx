@@ -120,7 +120,7 @@ export function BlogPostPage() {
         </p>
         <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap' }}>
           <a
-            href="https://wa.me/18097756773"
+            href="https://wa.me/18094517690"
             target="_blank"
             rel="noreferrer"
             style={{

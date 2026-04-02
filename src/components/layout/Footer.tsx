@@ -84,7 +84,7 @@ export function Footer() {
               { label: 'Contacto', href: '#' },
               { label: 'Políticas de Envío', href: '/politicas-envio', isRoute: true },
               { label: 'Políticas de Reembolso', href: '/politicas-reembolso', isRoute: true },
-              { label: 'WhatsApp', href: 'https://wa.me/18097756773', external: true },
+              { label: 'WhatsApp', href: 'https://wa.me/18094517690', external: true },
             ].map(l => l.isRoute ? (
               <Link key={l.label} to={l.href} style={{
                 display: 'block', fontSize: 14, marginBottom: 10,
@@ -134,7 +134,7 @@ export function Footer() {
                   <path d="M9 12a4 4 0 1 0 4 4V4a5 5 0 0 0 5 5"/>
                 </svg>
               </a>
-              <a href="https://wa.me/18097756773" target="_blank" rel="noreferrer"
+              <a href="https://wa.me/18094517690" target="_blank" rel="noreferrer"
                 style={{ color: 'rgba(255,255,255,0.7)', transition: 'color 0.2s' }}
                 onMouseEnter={e => ((e.target as HTMLElement).style.color = 'var(--pink)')}
                 onMouseLeave={e => ((e.target as HTMLElement).style.color = 'rgba(255,255,255,0.7)')}
@@ -148,7 +148,7 @@ export function Footer() {
         </div>
 
         <div style={{ borderTop: '1px solid rgba(255,255,255,0.12)', paddingTop: 24, textAlign: 'center', fontSize: 13, opacity: 0.55 }}>
-          © 2025 Chlea Care · Con amor, Cleo & Denisee 🩷
+          © 2025 Chlea Care · Tu cuidado y belleza es nuestra prioridad 🩷
         </div>
       </div>
     </footer>
