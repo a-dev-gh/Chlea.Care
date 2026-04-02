@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { SEED_NAV_DROPDOWNS } from '../../data/seedData';
+import { fetchNavDropdowns } from '../../utils/db';
+import { useSiteSettings } from '../../hooks/useSiteSettings';
 
 // All links for desktop
 const ALL_LINKS = [
@@ -21,6 +23,18 @@ export function CategoryNav() {
   const navRef = useRef<HTMLElement>(null);
   const navigate = useNavigate();
   const openedByHover = useRef(false);
+  const settings = useSiteSettings();
+
+  // Live nav dropdown data — seed fallback, then Supabase
+  const [dropdowns, setDropdowns] = useState<Record<string, { label: string; href: string }[]>>(SEED_NAV_DROPDOWNS);
+
+  useEffect(() => {
+    fetchNavDropdowns().then(data => {
+      // Only replace if we got real data (at least one category has items)
+      const hasData = Object.values(data).some(items => items.length > 0);
+      if (hasData) setDropdowns(data);
+    });
+  }, []);
 
   // Close dropdown when tapping outside
   useEffect(() => {
@@ -59,7 +73,7 @@ export function CategoryNav() {
       onMouseLeave={() => setActiveDropdown(null)}
     >
       {ALL_LINKS.map(link => {
-        const hasDropdown = SEED_NAV_DROPDOWNS[link.key]?.length > 0;
+        const hasDropdown = dropdowns[link.key]?.length > 0;
         const isOpen = activeDropdown === link.key;
 
         return (
@@ -142,7 +156,7 @@ export function CategoryNav() {
                   animation: 'dropdownIn 0.15s ease',
                 }}
               >
-                {SEED_NAV_DROPDOWNS[link.key].map((item, i) => (
+                {dropdowns[link.key].map((item, i) => (
                   <Link
                     key={i}
                     to={item.href}
@@ -193,6 +207,37 @@ export function CategoryNav() {
         );
       })}
 
+      {/* Promotional nav slot — configured by admin in AdminNavegacion */}
+      {settings.promo_nav_name && (
+        <div className="cat-item cat-item-promo" style={{ position: 'relative' }}>
+          <button
+            onClick={() => navigate(settings.promo_nav_href || '/catalogo')}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 6,
+              padding: '6px 16px',
+              margin: '6px 4px',
+              fontSize: 13,
+              fontWeight: 700,
+              fontFamily: 'var(--font-body)',
+              background: 'var(--hot)',
+              color: '#fff',
+              borderRadius: 'var(--r-pill)',
+              border: 'none',
+              cursor: 'pointer',
+              whiteSpace: 'nowrap',
+              transition: 'opacity 0.15s',
+            }}
+            onMouseEnter={e => (e.currentTarget.style.opacity = '0.85')}
+            onMouseLeave={e => (e.currentTarget.style.opacity = '1')}
+            className="cat-link cat-link-promo"
+          >
+            {settings.promo_nav_emoji} {settings.promo_nav_name}
+          </button>
+        </div>
+      )}
+
       <style>{`
         .cat-nav::-webkit-scrollbar { display: none; }
         .cat-link:hover { color: var(--pink) !important; }
@@ -215,10 +260,19 @@ export function CategoryNav() {
           .cat-item-ofertas,
           .cat-item-hombres { display: none !important; }
 
+          /* Promo slot always shows on mobile — it becomes the 4th slot */
+          .cat-item-promo { display: inline-flex !important; }
+
           .cat-nav .cat-link {
             padding: 11px 20px !important;
             font-size: 12px !important;
             font-weight: 600 !important;
+          }
+
+          /* Promo pill keeps its own padding on mobile */
+          .cat-link-promo {
+            padding: 6px 14px !important;
+            font-size: 12px !important;
           }
 
           .cat-item { position: static !important; }

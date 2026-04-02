@@ -33,7 +33,8 @@ export function AdminOrdenes() {
 
   async function updateStatus(orderId: string, newStatus: OrderStatus) {
     if (supabase) {
-      await adminUpdate<WhatsAppOrder>('whatsapp_orders', orderId, { status: newStatus } as any);
+      const { error } = await adminUpdate<WhatsAppOrder>('whatsapp_orders', orderId, { status: newStatus } as any);
+      if (error) alert('Error al actualizar: ' + error);
       await loadOrders();
     } else {
       setOrders(prev => prev.map(o => o.id === orderId ? { ...o, status: newStatus } : o));

@@ -19,6 +19,8 @@ import type {
   InstagramPost,
   BlogPost,
   WhatsAppOrder,
+  ProductReview,
+  Testimonial,
 } from '../types/database';
 
 // ---------------------------------------------------------------------------
@@ -50,10 +52,13 @@ function seedProductsToProducts(): Product[] {
     is_hot: p.is_hot,
     sale_percent: p.sale_percent,
     description: p.description,
+    // Keep human-readable brand name for display in ProductCard / ProductModal
+    brand: p.brand,
     brand_slug: p.brand
       ? p.brand.toLowerCase().replace(/[&\s]+/g, '-').replace(/--+/g, '-')
       : null,
     image_url: p.image_url ?? '',
+    image_urls: p.image_urls,
     is_visible: p.is_visible,
     labels: p.labels ?? {},
     created_at: new Date().toISOString(),
@@ -252,4 +257,100 @@ export async function insertOrder(
   }
 
   return data as WhatsAppOrder;
+}
+
+// ---------------------------------------------------------------------------
+// Product Reviews
+// ---------------------------------------------------------------------------
+
+/** Fetch reviews for a specific product, newest first. */
+export async function fetchProductReviews(productId: string): Promise<ProductReview[]> {
+  if (!supabase) return [];
+
+  const { data, error } = await supabase
+    .from('product_reviews')
+    .select('*')
+    .eq('product_id', productId)
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    console.warn('[db] fetchProductReviews failed:', error.message);
+    return [];
+  }
+
+  return data as ProductReview[];
+}
+
+/** Submit a new product review (user must be logged in). */
+export async function submitProductReview(
+  review: Omit<ProductReview, 'id' | 'created_at'>,
+): Promise<ProductReview | null> {
+  if (!supabase) return null;
+
+  const { data, error } = await supabase
+    .from('product_reviews')
+    .insert(review)
+    .select()
+    .single();
+
+  if (error) {
+    console.warn('[db] submitProductReview failed:', error.message);
+    return null;
+  }
+
+  return data as ProductReview;
+}
+
+/** Delete a product review (own user or admin). */
+export async function deleteProductReview(id: string): Promise<boolean> {
+  if (!supabase) return false;
+
+  const { error } = await supabase.from('product_reviews').delete().eq('id', id);
+
+  if (error) {
+    console.warn('[db] deleteProductReview failed:', error.message);
+    return false;
+  }
+
+  return true;
+}
+
+// ---------------------------------------------------------------------------
+// Testimonials
+// ---------------------------------------------------------------------------
+
+/** Fetch approved testimonials for the homepage carousel. */
+export async function fetchTestimonials(): Promise<Testimonial[]> {
+  if (!supabase) return [];
+
+  const { data, error } = await supabase
+    .from('testimonials')
+    .select('*')
+    .eq('is_approved', true)
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    console.warn('[db] fetchTestimonials failed:', error.message);
+    return [];
+  }
+
+  return data as Testimonial[];
+}
+
+/** Submit a new testimonial (public, starts unapproved). */
+export async function submitTestimonial(
+  testimonial: { name: string; rating: number; text: string },
+): Promise<boolean> {
+  if (!supabase) return false;
+
+  const { error } = await supabase
+    .from('testimonials')
+    .insert({ ...testimonial, is_approved: false });
+
+  if (error) {
+    console.warn('[db] submitTestimonial failed:', error.message);
+    return false;
+  }
+
+  return true;
 }

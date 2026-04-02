@@ -2,11 +2,19 @@
  * Admin CRUD helpers for Supabase.
  *
  * Every function guards against a null client (env vars missing)
- * and logs warnings instead of throwing so the admin panel degrades
- * gracefully when Supabase is not yet configured.
+ * and returns { data, error } so the UI can surface errors to the user.
  */
 
 import { supabase } from './supabase';
+
+// ---------------------------------------------------------------------------
+// Result types — every mutation returns data + error so the UI can react
+// ---------------------------------------------------------------------------
+
+export interface AdminResult<T> {
+  data: T | null;
+  error: string | null;
+}
 
 // ---------------------------------------------------------------------------
 // Generic fetch
@@ -56,10 +64,9 @@ export async function adminFetch<T>(
 export async function adminInsert<T>(
   table: string,
   data: Partial<T>,
-): Promise<T | null> {
+): Promise<AdminResult<T>> {
   if (!supabase) {
-    console.warn('[adminApi] Supabase not configured — insert skipped.');
-    return null;
+    return { data: null, error: 'Supabase no configurado' };
   }
 
   const { data: result, error } = await supabase
@@ -70,10 +77,10 @@ export async function adminInsert<T>(
 
   if (error) {
     console.warn(`[adminApi] insert into ${table} failed:`, error.message);
-    return null;
+    return { data: null, error: error.message };
   }
 
-  return result as T;
+  return { data: result as T, error: null };
 }
 
 // ---------------------------------------------------------------------------
@@ -84,10 +91,9 @@ export async function adminUpdate<T>(
   table: string,
   id: string,
   data: Partial<T>,
-): Promise<T | null> {
+): Promise<AdminResult<T>> {
   if (!supabase) {
-    console.warn('[adminApi] Supabase not configured — update skipped.');
-    return null;
+    return { data: null, error: 'Supabase no configurado' };
   }
 
   const { data: result, error } = await supabase
@@ -99,10 +105,10 @@ export async function adminUpdate<T>(
 
   if (error) {
     console.warn(`[adminApi] update ${table} (id=${id}) failed:`, error.message);
-    return null;
+    return { data: null, error: error.message };
   }
 
-  return result as T;
+  return { data: result as T, error: null };
 }
 
 // ---------------------------------------------------------------------------
@@ -112,20 +118,19 @@ export async function adminUpdate<T>(
 export async function adminDelete(
   table: string,
   id: string,
-): Promise<boolean> {
+): Promise<{ ok: boolean; error: string | null }> {
   if (!supabase) {
-    console.warn('[adminApi] Supabase not configured — delete skipped.');
-    return false;
+    return { ok: false, error: 'Supabase no configurado' };
   }
 
   const { error } = await supabase.from(table).delete().eq('id', id);
 
   if (error) {
     console.warn(`[adminApi] delete from ${table} (id=${id}) failed:`, error.message);
-    return false;
+    return { ok: false, error: error.message };
   }
 
-  return true;
+  return { ok: true, error: null };
 }
 
 // ---------------------------------------------------------------------------
@@ -136,20 +141,19 @@ export async function adminDeleteWhere(
   table: string,
   column: string,
   value: string,
-): Promise<boolean> {
+): Promise<{ ok: boolean; error: string | null }> {
   if (!supabase) {
-    console.warn('[adminApi] Supabase not configured — deleteWhere skipped.');
-    return false;
+    return { ok: false, error: 'Supabase no configurado' };
   }
 
   const { error } = await supabase.from(table).delete().eq(column, value);
 
   if (error) {
     console.warn(`[adminApi] deleteWhere ${table}.${column}=${value} failed:`, error.message);
-    return false;
+    return { ok: false, error: error.message };
   }
 
-  return true;
+  return { ok: true, error: null };
 }
 
 // ---------------------------------------------------------------------------
@@ -159,10 +163,9 @@ export async function adminDeleteWhere(
 export async function adminBulkInsert<T>(
   table: string,
   rows: Partial<T>[],
-): Promise<T[]> {
+): Promise<{ data: T[]; error: string | null }> {
   if (!supabase) {
-    console.warn('[adminApi] Supabase not configured — bulkInsert skipped.');
-    return [];
+    return { data: [], error: 'Supabase no configurado' };
   }
 
   const { data, error } = await supabase
@@ -172,10 +175,10 @@ export async function adminBulkInsert<T>(
 
   if (error) {
     console.warn(`[adminApi] bulkInsert into ${table} failed:`, error.message);
-    return [];
+    return { data: [], error: error.message };
   }
 
-  return data as T[];
+  return { data: data as T[], error: null };
 }
 
 // ---------------------------------------------------------------------------

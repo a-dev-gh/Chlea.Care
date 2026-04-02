@@ -441,8 +441,8 @@ export function TopNav() {
               <div>
                 <img src="/chlea-care-logo.svg" alt="Chlea Care" style={{ height: 64, display: 'block' }} />
                 <p style={{
-                  fontSize: 11, fontStyle: 'italic',
-                  color: 'var(--text-muted)',
+                  fontSize: 13, fontWeight: 700,
+                  color: 'var(--deep)',
                   fontFamily: 'var(--font-display)',
                   letterSpacing: 0.3,
                   marginTop: -4,

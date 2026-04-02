@@ -1,11 +1,23 @@
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import { fetchBrands } from '../../utils/db';
 import { SEED_BRANDS } from '../../data/seedData';
-
-const MAX_PREMIER_BRANDS = 6;
+import type { Brand } from '../../types/database';
 
 export function Footer() {
-  // Show max premier brands in footer
-  const footerBrands = SEED_BRANDS.slice(0, MAX_PREMIER_BRANDS);
+  // Load brands from DB, fallback to seed
+  const [footerBrands, setFooterBrands] = useState<{ name: string; slug: string }[]>(
+    SEED_BRANDS.slice(0, 6).map(b => ({ name: b.name, slug: b.slug }))
+  );
+
+  useEffect(() => {
+    fetchBrands().then((brands: Brand[]) => {
+      const premier = brands.filter(b => b.is_premier);
+      if (premier.length > 0) {
+        setFooterBrands(premier.slice(0, 6).map(b => ({ name: b.name, slug: b.slug })));
+      }
+    });
+  }, []);
 
   return (
     <footer style={{ background: 'var(--deep)', color: 'rgba(255,255,255,0.85)', padding: '56px 24px 32px' }}>
@@ -23,8 +35,8 @@ export function Footer() {
               alt="Chlea Care"
               style={{ height: 52, marginBottom: 14 }}
             />
-            <p style={{ fontSize: 13, lineHeight: 1.6, opacity: 0.7, maxWidth: 220 }}>
-              Premium Beauty &amp; Lifestyle<br />Santo Domingo, RD
+            <p style={{ fontSize: 13, lineHeight: 1.6, opacity: 0.85, maxWidth: 240, fontWeight: 500 }}>
+              Tu cuidado y belleza es nuestra prioridad
             </p>
           </div>
 

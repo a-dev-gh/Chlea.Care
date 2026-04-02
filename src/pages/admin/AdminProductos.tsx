@@ -7,7 +7,7 @@ import { adminFetch, adminInsert, adminUpdate, adminDelete } from '../../utils/a
 import { SEED_PRODUCTS } from '../../data/seedData';
 import { SEED_BRANDS } from '../../data/seedData';
 import { supabase } from '../../utils/supabase';
-import type { Product, Brand } from '../../types/database';
+import type { Product, Brand, LabelGroup } from '../../types/database';
 
 // Seed fallback mapper (same as db.ts)
 function seedToProducts(): Product[] {
@@ -26,6 +26,8 @@ function seedToProducts(): Product[] {
     image_url: p.image_url ?? '',
     image_urls: p.image_urls ?? [],
     is_visible: p.is_visible,
+    is_in_stock: true,
+    is_by_request: false,
     labels: p.labels ?? {},
     created_at: new Date().toISOString(),
   }));
@@ -51,6 +53,18 @@ const CATEGORIES = [
   { value: 'hombres', label: 'Hombres' },
 ];
 
+// Badge options — non-technical friendly dropdown
+const BADGE_OPTIONS = [
+  { value: '',              label: 'Sin badge' },
+  { value: 'Nuevo',        label: '✦ Nuevo' },
+  { value: 'Bestseller',   label: '🏆 Bestseller' },
+  { value: 'Oferta',       label: '🔥 Oferta' },
+  { value: 'Vegano',       label: '🌿 Vegano' },
+  { value: 'Sin Crueldad', label: '🐰 Sin Crueldad' },
+  { value: 'Top Rated',    label: '⭐ Top Rated' },
+  { value: 'Viral',        label: '🔥 Viral' },
+];
+
 const EMPTY_PRODUCT: Partial<Product> = {
   name: '',
   price: 0,
@@ -63,6 +77,8 @@ const EMPTY_PRODUCT: Partial<Product> = {
   image_url: '',
   image_urls: [],
   is_visible: true,
+  is_in_stock: true,
+  is_by_request: false,
   labels: {},
 };
 
@@ -72,6 +88,7 @@ const inputStyle: React.CSSProperties = {
   border: '1.5px solid var(--border2)', borderRadius: 'var(--r-sm)',
   fontSize: 14, fontFamily: 'var(--font-body)', color: 'var(--text)',
   outline: 'none', background: 'var(--white)',
+  boxSizing: 'border-box',
 };
 
 const labelStyle: React.CSSProperties = {
@@ -80,25 +97,47 @@ const labelStyle: React.CSSProperties = {
   textTransform: 'uppercase', letterSpacing: 1,
 };
 
+// Small thumbnail for image previews
+function ImageThumb({ url, size = 64 }: { url: string; size?: number }) {
+  if (!url) return null;
+  return (
+    <img
+      src={url}
+      alt=""
+      onError={e => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
+      style={{
+        width: size, height: size,
+        borderRadius: 8, objectFit: 'cover',
+        border: '1.5px solid var(--border)',
+        display: 'block', flexShrink: 0,
+        marginTop: 8,
+      }}
+    />
+  );
+}
+
 export function AdminProductos() {
   const [products, setProducts] = useState<Product[]>([]);
   const [brands, setBrands] = useState<Brand[]>([]);
+  const [labelGroups, setLabelGroups] = useState<LabelGroup[]>([]);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState<Partial<Product> | null>(null);
   const [isNew, setIsNew] = useState(false);
   const [saving, setSaving] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
 
-  // Fetch products and brands
+  // Fetch products, brands, and label groups
   const loadData = useCallback(async () => {
     setLoading(true);
-    const [prods, brnds] = await Promise.all([
+    const [prods, brnds, groups] = await Promise.all([
       adminFetch<Product>('products', { orderBy: 'created_at', ascending: false }),
       adminFetch<Brand>('brands', { orderBy: 'name' }),
+      adminFetch<LabelGroup>('label_groups', { orderBy: 'sort_order' }),
     ]);
     // If Supabase not configured, use seed data
     setProducts(prods.length > 0 ? prods : seedToProducts());
     setBrands(brnds.length > 0 ? brnds : seedToBrands());
+    setLabelGroups(groups);
     setLoading(false);
   }, []);
 
@@ -116,20 +155,20 @@ export function AdminProductos() {
     setIsNew(false);
   }
 
-  // Save (create or update)
+  // Save (create or update) — image_urls is now included in the payload
   async function handleSave() {
     if (!editing || !editing.name?.trim()) return;
     setSaving(true);
 
     if (supabase) {
       if (isNew) {
-        const { id, created_at, ...rest } = editing as any;
-        const result = await adminInsert<Product>('products', rest);
-        if (result) await loadData();
+        const { id, created_at, ...dbData } = editing as any;
+        const { error } = await adminInsert<Product>('products', dbData);
+        if (error) { alert('Error al guardar: ' + error); } else { await loadData(); }
       } else {
-        const { id, created_at, ...rest } = editing as any;
-        await adminUpdate<Product>('products', editing.id as string, rest);
-        await loadData();
+        const { id, created_at, ...dbData } = editing as any;
+        const { error } = await adminUpdate<Product>('products', editing.id as string, dbData);
+        if (error) { alert('Error al guardar: ' + error); } else { await loadData(); }
       }
     } else {
       // Local-only fallback: update state directly
@@ -148,7 +187,8 @@ export function AdminProductos() {
   // Delete
   async function handleDelete(id: string) {
     if (supabase) {
-      const ok = await adminDelete('products', id);
+      const { ok, error } = await adminDelete('products', id);
+      if (error) alert('Error al eliminar: ' + error);
       if (ok) await loadData();
     } else {
       setProducts(prev => prev.filter(p => p.id !== id));
@@ -160,7 +200,8 @@ export function AdminProductos() {
   async function toggleVisible(product: Product) {
     const updated = { ...product, is_visible: !product.is_visible };
     if (supabase) {
-      await adminUpdate<Product>('products', product.id, { is_visible: updated.is_visible } as any);
+      const { error } = await adminUpdate<Product>('products', product.id, { is_visible: updated.is_visible } as any);
+      if (error) alert('Error: ' + error);
       await loadData();
     } else {
       setProducts(prev => prev.map(p => p.id === product.id ? updated : p));
@@ -188,14 +229,40 @@ export function AdminProductos() {
     setEditing({ ...editing, image_urls: urls });
   }
 
-  // Labels helper (JSON key-value editor)
-  function labelsToString(labels: Record<string, string[]> | undefined): string {
-    if (!labels || Object.keys(labels).length === 0) return '';
-    try { return JSON.stringify(labels, null, 2); } catch { return ''; }
+  // Promote a gallery image to the main image_url (swap)
+  function promoteGalleryImage(index: number) {
+    if (!editing) return;
+    const urls = [...(editing.image_urls ?? [])];
+    const promoted = urls[index];
+    const currentMain = editing.image_url ?? '';
+    // Put current main into that gallery slot (swap), or just remove it
+    urls[index] = currentMain;
+    setEditing({ ...editing, image_url: promoted, image_urls: urls });
   }
 
-  function stringToLabels(str: string): Record<string, string[]> {
-    try { return JSON.parse(str); } catch { return {}; }
+  // Label checkbox helpers
+  function isLabelChecked(groupName: string, value: string): boolean {
+    const current = editing?.labels ?? {};
+    return (current[groupName] ?? []).includes(value);
+  }
+
+  function toggleLabel(groupName: string, value: string) {
+    if (!editing) return;
+    const current: Record<string, string[]> = { ...(editing.labels ?? {}) };
+    const groupValues = [...(current[groupName] ?? [])];
+    const idx = groupValues.indexOf(value);
+    if (idx === -1) {
+      groupValues.push(value);
+    } else {
+      groupValues.splice(idx, 1);
+    }
+    // Exclude group entirely if no values selected
+    if (groupValues.length === 0) {
+      delete current[groupName];
+    } else {
+      current[groupName] = groupValues;
+    }
+    setEditing({ ...editing, labels: current });
   }
 
   if (loading) {
@@ -337,195 +404,291 @@ export function AdminProductos() {
         </div>
       </Modal>
 
-      {/* Create / Edit Modal */}
-      <Modal open={!!editing} onClose={() => setEditing(null)} maxWidth={600}>
+      {/* Create / Edit Modal — 880px wide, 2-column grid */}
+      <Modal open={!!editing} onClose={() => setEditing(null)} maxWidth={880}>
         {editing && (
           <div style={{ padding: 28 }}>
+            {/* Responsive grid CSS */}
+            <style>{`@media (max-width: 680px) { .product-form-grid { grid-template-columns: 1fr !important; } }`}</style>
+
             <h3 style={{ fontFamily: 'var(--font-display)', fontSize: 24, fontWeight: 400, marginBottom: 24 }}>
               {isNew ? 'Nuevo Producto' : 'Editar Producto'}
             </h3>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-              {/* Name */}
-              <div>
-                <label style={labelStyle}>Nombre</label>
-                <input
-                  value={editing.name || ''}
-                  onChange={e => setEditing({ ...editing, name: e.target.value })}
-                  placeholder="Ej: OI All In One Milk"
-                  style={inputStyle}
-                />
-              </div>
 
-              {/* Price + Sale */}
-              <div style={{ display: 'flex', gap: 16 }}>
-                <div style={{ flex: 1 }}>
-                  <label style={labelStyle}>Precio (RD$)</label>
+            <div
+              className="product-form-grid"
+              style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 24 }}
+            >
+              {/* ── LEFT COLUMN: name, price/sale, category/brand, badge, description ── */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+
+                {/* Name */}
+                <div>
+                  <label style={labelStyle}>Nombre</label>
                   <input
-                    type="number" min={0}
-                    value={editing.price || 0}
-                    onChange={e => setEditing({ ...editing, price: Number(e.target.value) })}
+                    value={editing.name || ''}
+                    onChange={e => setEditing({ ...editing, name: e.target.value })}
+                    placeholder="Ej: OI All In One Milk"
                     style={inputStyle}
                   />
                 </div>
-                <div style={{ flex: 1 }}>
-                  <label style={labelStyle}>Descuento (%)</label>
-                  <input
-                    type="number" min={0} max={100}
-                    value={editing.sale_percent || 0}
-                    onChange={e => setEditing({ ...editing, sale_percent: Number(e.target.value) })}
-                    style={inputStyle}
+
+                {/* Price + Sale */}
+                <div style={{ display: 'flex', gap: 12 }}>
+                  <div style={{ flex: 1 }}>
+                    <label style={labelStyle}>Precio (RD$)</label>
+                    <input
+                      type="number" min={0}
+                      value={editing.price || 0}
+                      onChange={e => setEditing({ ...editing, price: Number(e.target.value) })}
+                      style={inputStyle}
+                    />
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <label style={labelStyle}>Descuento (%)</label>
+                    <input
+                      type="number" min={0} max={100}
+                      value={editing.sale_percent || 0}
+                      onChange={e => setEditing({ ...editing, sale_percent: Number(e.target.value) })}
+                      style={inputStyle}
+                    />
+                  </div>
+                </div>
+
+                {/* Category + Brand */}
+                <div style={{ display: 'flex', gap: 12 }}>
+                  <div style={{ flex: 1 }}>
+                    <label style={labelStyle}>Categoria</label>
+                    <select
+                      value={editing.category || 'cabello'}
+                      onChange={e => setEditing({ ...editing, category: e.target.value as Product['category'] })}
+                      style={{ ...inputStyle, cursor: 'pointer' }}
+                    >
+                      {CATEGORIES.map(c => (
+                        <option key={c.value} value={c.value}>{c.label}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <label style={labelStyle}>Marca</label>
+                    <select
+                      value={editing.brand_slug || ''}
+                      onChange={e => setEditing({ ...editing, brand_slug: e.target.value || null })}
+                      style={{ ...inputStyle, cursor: 'pointer' }}
+                    >
+                      <option value="">Sin marca</option>
+                      {brands.map(b => (
+                        <option key={b.slug} value={b.slug}>{b.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                {/* Badge — friendly dropdown */}
+                <div>
+                  <label style={labelStyle}>Badge</label>
+                  <select
+                    value={editing.badge || ''}
+                    onChange={e => setEditing({ ...editing, badge: e.target.value })}
+                    style={{ ...inputStyle, cursor: 'pointer' }}
+                  >
+                    {BADGE_OPTIONS.map(opt => (
+                      <option key={opt.value} value={opt.value}>{opt.label}</option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Description */}
+                <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+                  <label style={labelStyle}>Descripcion</label>
+                  <textarea
+                    value={editing.description || ''}
+                    onChange={e => setEditing({ ...editing, description: e.target.value })}
+                    rows={6}
+                    placeholder="Descripcion del producto..."
+                    style={{ ...inputStyle, resize: 'vertical', flex: 1 }}
                   />
                 </div>
+
               </div>
 
-              {/* Category + Brand */}
-              <div style={{ display: 'flex', gap: 16 }}>
-                <div style={{ flex: 1 }}>
-                  <label style={labelStyle}>Categoria</label>
-                  <select
-                    value={editing.category || 'cabello'}
-                    onChange={e => setEditing({ ...editing, category: e.target.value as Product['category'] })}
-                    style={{ ...inputStyle, cursor: 'pointer' }}
-                  >
-                    {CATEGORIES.map(c => (
-                      <option key={c.value} value={c.value}>{c.label}</option>
-                    ))}
-                  </select>
-                </div>
-                <div style={{ flex: 1 }}>
-                  <label style={labelStyle}>Marca</label>
-                  <select
-                    value={editing.brand_slug || ''}
-                    onChange={e => setEditing({ ...editing, brand_slug: e.target.value || null })}
-                    style={{ ...inputStyle, cursor: 'pointer' }}
-                  >
-                    <option value="">Sin marca</option>
-                    {brands.map(b => (
-                      <option key={b.slug} value={b.slug}>{b.name}</option>
-                    ))}
-                  </select>
-                </div>
-              </div>
+              {/* ── RIGHT COLUMN: images, toggles, labels ── */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
 
-              {/* Badge */}
-              <div>
-                <label style={labelStyle}>Badge</label>
-                <input
-                  value={editing.badge || ''}
-                  onChange={e => setEditing({ ...editing, badge: e.target.value })}
-                  placeholder="Ej: Bestseller, Nuevo, Top Rated"
-                  style={inputStyle}
-                />
-              </div>
-
-              {/* Description */}
-              <div>
-                <label style={labelStyle}>Descripcion</label>
-                <textarea
-                  value={editing.description || ''}
-                  onChange={e => setEditing({ ...editing, description: e.target.value })}
-                  rows={3}
-                  placeholder="Descripcion del producto..."
-                  style={{ ...inputStyle, resize: 'vertical' }}
-                />
-              </div>
-
-              {/* Main image URL */}
-              <div>
-                <label style={labelStyle}>Imagen principal (URL)</label>
-                <input
-                  value={editing.image_url || ''}
-                  onChange={e => setEditing({ ...editing, image_url: e.target.value })}
-                  placeholder="https://..."
-                  style={inputStyle}
-                />
-              </div>
-
-              {/* Gallery images */}
-              <div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-                  <label style={{ ...labelStyle, marginBottom: 0 }}>Galeria de imagenes (max 6)</label>
-                  {(editing.image_urls?.length ?? 0) < 6 && (
-                    <button onClick={addGallerySlot} style={{
-                      padding: '3px 10px', borderRadius: 'var(--r-pill)',
-                      border: '1px solid var(--hot)', background: 'rgba(235,25,130,0.06)',
-                      color: 'var(--hot)', fontSize: 11, fontWeight: 700,
-                      cursor: 'pointer', fontFamily: 'var(--font-body)',
-                    }}>
-                      + Imagen
-                    </button>
+                {/* Main image URL + thumbnail */}
+                <div>
+                  <label style={labelStyle}>Imagen principal (URL)</label>
+                  <input
+                    value={editing.image_url || ''}
+                    onChange={e => setEditing({ ...editing, image_url: e.target.value })}
+                    placeholder="https://..."
+                    style={inputStyle}
+                  />
+                  {editing.image_url && (
+                    <ImageThumb url={editing.image_url} size={64} />
                   )}
                 </div>
-                {(editing.image_urls ?? []).map((url, idx) => (
-                  <div key={idx} style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
-                    <input
-                      value={url}
-                      onChange={e => updateGalleryImage(idx, e.target.value)}
-                      placeholder={`URL imagen ${idx + 1}`}
-                      style={{ ...inputStyle, flex: 1 }}
-                    />
-                    <button onClick={() => removeGalleryImage(idx)} style={{
-                      background: 'none', border: '1px solid rgba(239,68,68,0.3)',
-                      borderRadius: 'var(--r-sm)', color: '#ef4444',
-                      padding: '0 10px', cursor: 'pointer', fontSize: 16,
-                    }}>
-                      x
-                    </button>
+
+                {/* Gallery images + thumbnails + star-promote button */}
+                <div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                    <label style={{ ...labelStyle, marginBottom: 0 }}>Galeria de imagenes (max 6)</label>
+                    {(editing.image_urls?.length ?? 0) < 6 && (
+                      <button onClick={addGallerySlot} style={{
+                        padding: '3px 10px', borderRadius: 'var(--r-pill)',
+                        border: '1px solid var(--hot)', background: 'rgba(235,25,130,0.06)',
+                        color: 'var(--hot)', fontSize: 11, fontWeight: 700,
+                        cursor: 'pointer', fontFamily: 'var(--font-body)',
+                      }}>
+                        + Imagen
+                      </button>
+                    )}
                   </div>
-                ))}
-              </div>
+                  {(editing.image_urls ?? []).map((url, idx) => (
+                    <div key={idx} style={{ marginBottom: 10 }}>
+                      <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                        <input
+                          value={url}
+                          onChange={e => updateGalleryImage(idx, e.target.value)}
+                          placeholder={`URL imagen ${idx + 1}`}
+                          style={{ ...inputStyle, flex: 1 }}
+                        />
+                        {/* Star button: promotes this gallery image to the main slot */}
+                        <button
+                          onClick={() => promoteGalleryImage(idx)}
+                          title="Usar como imagen principal"
+                          style={{
+                            background: 'none',
+                            border: '1px solid var(--border2)',
+                            borderRadius: 'var(--r-sm)',
+                            color: url && url === editing.image_url ? 'var(--hot)' : 'var(--text-muted)',
+                            padding: '0 10px', cursor: 'pointer', fontSize: 17,
+                            lineHeight: '36px', height: 38,
+                          }}
+                        >
+                          {url && url === editing.image_url ? '★' : '☆'}
+                        </button>
+                        {/* Remove button */}
+                        <button onClick={() => removeGalleryImage(idx)} style={{
+                          background: 'none', border: '1px solid rgba(239,68,68,0.3)',
+                          borderRadius: 'var(--r-sm)', color: '#ef4444',
+                          padding: '0 10px', cursor: 'pointer', fontSize: 16,
+                          lineHeight: '36px', height: 38,
+                        }}>
+                          ×
+                        </button>
+                      </div>
+                      {/* Gallery thumbnail */}
+                      {url && <ImageThumb url={url} size={48} />}
+                    </div>
+                  ))}
+                </div>
 
-              {/* Toggles row */}
-              <div style={{ display: 'flex', gap: 24 }}>
-                <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 14, color: 'var(--text-soft)' }}>
-                  <input
-                    type="checkbox"
-                    checked={editing.is_hot || false}
-                    onChange={e => setEditing({ ...editing, is_hot: e.target.checked })}
-                    style={{ accentColor: 'var(--hot)', width: 16, height: 16 }}
-                  />
-                  Producto hot / trending
-                </label>
-                <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 14, color: 'var(--text-soft)' }}>
-                  <input
-                    type="checkbox"
-                    checked={editing.is_visible ?? true}
-                    onChange={e => setEditing({ ...editing, is_visible: e.target.checked })}
-                    style={{ accentColor: 'var(--hot)', width: 16, height: 16 }}
-                  />
-                  Visible en la tienda
-                </label>
-              </div>
+                {/* Toggles row — hot, visible, in_stock, by_request */}
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 16 }}>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 14, color: 'var(--text-soft)' }}>
+                    <input
+                      type="checkbox"
+                      checked={editing.is_hot || false}
+                      onChange={e => setEditing({ ...editing, is_hot: e.target.checked })}
+                      style={{ accentColor: 'var(--hot)', width: 16, height: 16 }}
+                    />
+                    Trending / Hot
+                  </label>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 14, color: 'var(--text-soft)' }}>
+                    <input
+                      type="checkbox"
+                      checked={editing.is_visible ?? true}
+                      onChange={e => setEditing({ ...editing, is_visible: e.target.checked })}
+                      style={{ accentColor: 'var(--hot)', width: 16, height: 16 }}
+                    />
+                    Visible en tienda
+                  </label>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 14, color: 'var(--text-soft)' }}>
+                    <input
+                      type="checkbox"
+                      checked={editing.is_in_stock ?? true}
+                      onChange={e => setEditing({ ...editing, is_in_stock: e.target.checked })}
+                      style={{ accentColor: 'var(--hot)', width: 16, height: 16 }}
+                    />
+                    En stock
+                  </label>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 14, color: 'var(--text-soft)' }}>
+                    <input
+                      type="checkbox"
+                      checked={editing.is_by_request ?? false}
+                      onChange={e => setEditing({ ...editing, is_by_request: e.target.checked })}
+                      style={{ accentColor: 'var(--hot)', width: 16, height: 16 }}
+                    />
+                    Por Pedido
+                  </label>
+                </div>
 
-              {/* Labels (JSON editor) */}
-              <div>
-                <label style={labelStyle}>
-                  Etiquetas (JSON)
-                </label>
-                <p style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 8 }}>
-                  Formato: {`{"Tipo de Cabello": ["Rizado", "Lacio"], "Preocupaciones": ["Frizz"]}`}
-                </p>
-                <textarea
-                  defaultValue={labelsToString(editing.labels)}
-                  onBlur={e => {
-                    const parsed = stringToLabels(e.target.value);
-                    setEditing(prev => ({ ...prev, labels: parsed }));
-                  }}
-                  rows={4}
-                  placeholder='{"Tipo de Cabello": ["Todo Tipo"]}'
-                  style={{ ...inputStyle, resize: 'vertical', fontFamily: 'monospace', fontSize: 13 }}
-                />
-              </div>
+                {/* Visual label picker — checkbox-based, replaces JSON textarea */}
+                <div>
+                  <label style={labelStyle}>Etiquetas para filtros</label>
+                  {labelGroups.length === 0 ? (
+                    <p style={{
+                      fontSize: 13, color: 'var(--text-muted)',
+                      background: 'var(--cream)', borderRadius: 'var(--r-sm)',
+                      padding: '12px 14px', lineHeight: 1.5,
+                    }}>
+                      No hay etiquetas creadas. Ve a <strong>Etiquetas</strong> para crear grupos.
+                    </p>
+                  ) : (
+                    <div style={{
+                      border: '1.5px solid var(--border2)', borderRadius: 'var(--r-sm)',
+                      padding: '12px 14px', display: 'flex', flexDirection: 'column', gap: 14,
+                      background: 'var(--white)',
+                    }}>
+                      {labelGroups.map(group => (
+                        <div key={group.id}>
+                          {/* Group name header */}
+                          <p style={{
+                            fontSize: 12, fontWeight: 700, color: 'var(--deep)',
+                            textTransform: 'uppercase', letterSpacing: 0.8,
+                            marginBottom: 8,
+                          }}>
+                            {group.name}
+                          </p>
+                          {/* Checkbox grid for group values */}
+                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px 16px' }}>
+                            {group.values.map(val => (
+                              <label
+                                key={val}
+                                style={{
+                                  display: 'flex', alignItems: 'center', gap: 6,
+                                  cursor: 'pointer', fontSize: 13, color: 'var(--text-soft)',
+                                  userSelect: 'none',
+                                }}
+                              >
+                                <input
+                                  type="checkbox"
+                                  checked={isLabelChecked(group.name, val)}
+                                  onChange={() => toggleLabel(group.name, val)}
+                                  style={{ accentColor: 'var(--hot)', width: 15, height: 15 }}
+                                />
+                                {val}
+                              </label>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
 
-              {/* Actions */}
-              <div style={{ display: 'flex', gap: 12, marginTop: 8 }}>
-                <Button onClick={handleSave} disabled={saving} fullWidth>
-                  {saving ? 'Guardando...' : isNew ? 'Crear Producto' : 'Guardar cambios'}
-                </Button>
-                <Button onClick={() => setEditing(null)} variant="outline" fullWidth>
-                  Cancelar
-                </Button>
               </div>
+            </div>
+
+            {/* Actions — full width below the grid */}
+            <div style={{ display: 'flex', gap: 12, marginTop: 24 }}>
+              <Button onClick={handleSave} disabled={saving} fullWidth>
+                {saving ? 'Guardando...' : isNew ? 'Crear Producto' : 'Guardar cambios'}
+              </Button>
+              <Button onClick={() => setEditing(null)} variant="outline" fullWidth>
+                Cancelar
+              </Button>
             </div>
           </div>
         )}

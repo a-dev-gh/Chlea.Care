@@ -18,10 +18,12 @@ interface NavItem {
 const NAV_ITEMS: NavItem[] = [
   { path: 'productos',     label: 'Productos' },
   { path: 'marcas',        label: 'Marcas' },
+  { path: 'etiquetas',     label: 'Etiquetas' },
   { path: 'ordenes',       label: 'Ordenes' },
   { path: 'social',        label: 'Redes Sociales' },
-  { path: 'blog',         label: 'Blog' },
-  { path: 'navegacion',   label: 'Navegacion',    minRole: ['super_admin', 'owner'] },
+  { path: 'blog',          label: 'Blog' },
+  { path: 'testimonios',   label: 'Testimonios' },
+  { path: 'navegacion',    label: 'Navegacion',    minRole: ['super_admin', 'owner'] },
   { path: 'configuracion', label: 'Configuracion', minRole: ['super_admin', 'owner'] },
 ];
 
@@ -35,7 +37,7 @@ export function AdminLayout() {
   const { pathname } = useLocation();
 
   if (loading) return <div style={{ textAlign: 'center', padding: 80, color: 'var(--text-muted)' }}>Verificando acceso...</div>;
-  if (!user || !role) return <Navigate to={isStudio ? '/' : '/cuenta'} replace />;
+  if (!user || !role) return <Navigate to={isStudio ? '/login' : '/cuenta'} replace />;
 
   return (
     <div style={{ display: 'flex', minHeight: '100vh' }}>

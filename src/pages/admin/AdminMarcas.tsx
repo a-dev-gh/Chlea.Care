@@ -94,12 +94,13 @@ export function AdminMarcas() {
     if (supabase) {
       if (isNew) {
         const { id, ...rest } = payload;
-        await adminInsert<Brand>('brands', rest as any);
+        const { error } = await adminInsert<Brand>('brands', rest as any);
+        if (error) { alert('Error al guardar: ' + error); } else { await loadBrands(); }
       } else {
         const { id, ...rest } = payload;
-        await adminUpdate<Brand>('brands', editing.id!, rest as any);
+        const { error } = await adminUpdate<Brand>('brands', editing.id!, rest as any);
+        if (error) { alert('Error al guardar: ' + error); } else { await loadBrands(); }
       }
-      await loadBrands();
     } else {
       // Local fallback
       if (isNew) {
@@ -116,7 +117,8 @@ export function AdminMarcas() {
 
   async function handleDelete(id: string) {
     if (supabase) {
-      const ok = await adminDelete('brands', id);
+      const { ok, error } = await adminDelete('brands', id);
+      if (error) alert('Error al eliminar: ' + error);
       if (ok) await loadBrands();
     } else {
       setBrands(prev => prev.filter(b => b.id !== id));

@@ -1,11 +1,18 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Button } from '../../components/ui/Button';
-import { adminFetch, adminDeleteWhere, adminBulkInsert } from '../../utils/adminApi';
+import { adminFetch, adminDeleteWhere, adminBulkInsert, adminUpsertSettings } from '../../utils/adminApi';
 import { SEED_NAV_DROPDOWNS } from '../../data/seedData';
 import { supabase } from '../../utils/supabase';
+import { fetchSettings } from '../../utils/db';
 import type { NavDropdown } from '../../types/database';
 
 const MAX_ITEMS = 5;
+
+// Badge options for the promo slot badge picker
+const BADGE_OPTIONS = ['Vegano', 'Sin Crueldad', 'Nuevo', 'Bestseller', 'Top Rated', 'Viral'];
+
+// Filter type options for the promo nav slot
+type PromoFilterType = 'ofertas' | 'badge' | 'custom';
 
 const CATEGORY_NAMES: Record<string, string> = {
   cabello: 'Cabello',
@@ -37,12 +44,28 @@ export function AdminNavegacion() {
   const [feedback, setFeedback] = useState('');
   const [editingCategory, setEditingCategory] = useState<string | null>(null);
 
+  // Promo nav slot state
+  const [promoName, setPromoName]           = useState('');
+  const [promoEmoji, setPromoEmoji]         = useState('');
+  const [promoFilterType, setPromoFilterType] = useState<PromoFilterType>('ofertas');
+  const [promoBadge, setPromoBadge]         = useState(BADGE_OPTIONS[0]);
+  const [promoCustomUrl, setPromoCustomUrl] = useState('');
+  const [promoSaving, setPromoSaving]       = useState(false);
+  const [promoFeedback, setPromoFeedback]   = useState('');
+
+  // Compute the resulting href from current promo fields
+  function computePromoHref(): string {
+    if (promoFilterType === 'ofertas') return '/catalogo?oferta=true';
+    if (promoFilterType === 'badge')   return `/catalogo?badge=${encodeURIComponent(promoBadge)}`;
+    return promoCustomUrl || '/catalogo';
+  }
+
   const loadDropdowns = useCallback(async () => {
     setLoading(true);
-    const data = await adminFetch<NavDropdown>('nav_dropdowns', { orderBy: 'sort_order' });
 
+    // Load nav dropdowns
+    const data = await adminFetch<NavDropdown>('nav_dropdowns', { orderBy: 'sort_order' });
     if (data.length > 0) {
-      // Group by category_slug
       const grouped: Record<string, NavDropdown[]> = {};
       for (const row of data) {
         if (!grouped[row.category_slug]) grouped[row.category_slug] = [];
@@ -52,6 +75,24 @@ export function AdminNavegacion() {
     } else {
       setDropdowns(seedToGrouped());
     }
+
+    // Load existing promo nav settings
+    const settings = await fetchSettings();
+    if (settings.promo_nav_name)  setPromoName(settings.promo_nav_name);
+    if (settings.promo_nav_emoji) setPromoEmoji(settings.promo_nav_emoji);
+    if (settings.promo_nav_href) {
+      const href = settings.promo_nav_href;
+      if (href.includes('oferta=true'))          setPromoFilterType('ofertas');
+      else if (href.includes('badge='))          {
+        setPromoFilterType('badge');
+        const m = href.match(/badge=([^&]+)/);
+        if (m) setPromoBadge(decodeURIComponent(m[1]));
+      } else {
+        setPromoFilterType('custom');
+        setPromoCustomUrl(href);
+      }
+    }
+
     setLoading(false);
   }, []);
 
@@ -104,6 +145,19 @@ export function AdminNavegacion() {
     });
   }
 
+  async function handlePromoSave() {
+    setPromoSaving(true);
+    setPromoFeedback('');
+    const ok = await adminUpsertSettings({
+      promo_nav_name:  promoName.trim(),
+      promo_nav_href:  computePromoHref(),
+      promo_nav_emoji: promoEmoji.trim(),
+    });
+    setPromoFeedback(ok ? 'Link promocional guardado' : 'Error al guardar');
+    setPromoSaving(false);
+    setTimeout(() => setPromoFeedback(''), 3000);
+  }
+
   async function handleSave() {
     setSaving(true);
     setFeedback('');
@@ -113,7 +167,8 @@ export function AdminNavegacion() {
       let success = true;
       for (const [cat, items] of Object.entries(dropdowns)) {
         // Delete all existing for this category
-        await adminDeleteWhere('nav_dropdowns', 'category_slug', cat);
+        const { error: delError } = await adminDeleteWhere('nav_dropdowns', 'category_slug', cat);
+        if (delError) { success = false; break; }
 
         // Insert new rows with correct sort_order
         if (items.length > 0) {
@@ -123,8 +178,8 @@ export function AdminNavegacion() {
             href: item.href,
             sort_order: i,
           }));
-          const result = await adminBulkInsert('nav_dropdowns', rows);
-          if (result.length === 0 && rows.length > 0) success = false;
+          const { data: inserted, error: insError } = await adminBulkInsert('nav_dropdowns', rows);
+          if (insError || (inserted.length === 0 && rows.length > 0)) success = false;
         }
       }
 
@@ -158,6 +213,172 @@ export function AdminNavegacion() {
         Configura los submenus que aparecen en la barra de categorias (la barra marron).
         Maximo {MAX_ITEMS} elementos por categoria.
       </p>
+
+      {/* ── Promo nav slot ────────────────────────────────────────────────── */}
+      <div style={{
+        background: 'rgba(235,25,130,0.04)',
+        border: '1.5px solid rgba(235,25,130,0.2)',
+        borderRadius: 'var(--r-md)',
+        padding: 24,
+        marginBottom: 36,
+      }}>
+        <p style={{
+          fontSize: 11, fontWeight: 700, letterSpacing: 1.5,
+          color: 'var(--hot)', textTransform: 'uppercase', marginBottom: 16,
+        }}>
+          Link Promocional
+        </p>
+        <p style={{ fontSize: 13, color: 'var(--text-soft)', marginBottom: 20, lineHeight: 1.5 }}>
+          Aparece como el 4to enlace en el menu movil y como un boton rosa en el menu de escritorio.
+        </p>
+
+        <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', marginBottom: 16 }}>
+          {/* Nombre */}
+          <div style={{ flex: 1, minWidth: 140 }}>
+            <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', letterSpacing: 1, textTransform: 'uppercase', display: 'block', marginBottom: 6 }}>
+              Nombre
+            </label>
+            <input
+              value={promoName}
+              onChange={e => setPromoName(e.target.value)}
+              placeholder="Ej: Ofertas"
+              maxLength={24}
+              style={{
+                width: '100%', padding: '9px 12px', fontSize: 13,
+                border: '1.5px solid var(--border2)', borderRadius: 'var(--r-sm)',
+                fontFamily: 'var(--font-body)', color: 'var(--text)',
+                outline: 'none', boxSizing: 'border-box',
+              }}
+              onFocus={e => (e.target.style.borderColor = 'var(--hot)')}
+              onBlur={e => (e.target.style.borderColor = 'var(--border2)')}
+            />
+          </div>
+
+          {/* Emoji */}
+          <div style={{ width: 80 }}>
+            <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', letterSpacing: 1, textTransform: 'uppercase', display: 'block', marginBottom: 6 }}>
+              Emoji
+            </label>
+            <input
+              value={promoEmoji}
+              onChange={e => setPromoEmoji(e.target.value.slice(0, 2))}
+              placeholder="🔥"
+              style={{
+                width: '100%', padding: '9px 12px', fontSize: 18, textAlign: 'center',
+                border: '1.5px solid var(--border2)', borderRadius: 'var(--r-sm)',
+                fontFamily: 'var(--font-body)', outline: 'none', boxSizing: 'border-box',
+              }}
+              onFocus={e => (e.target.style.borderColor = 'var(--hot)')}
+              onBlur={e => (e.target.style.borderColor = 'var(--border2)')}
+            />
+          </div>
+
+          {/* Filter type */}
+          <div style={{ flex: 1, minWidth: 180 }}>
+            <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', letterSpacing: 1, textTransform: 'uppercase', display: 'block', marginBottom: 6 }}>
+              Tipo de filtro
+            </label>
+            <select
+              value={promoFilterType}
+              onChange={e => setPromoFilterType(e.target.value as PromoFilterType)}
+              style={{
+                width: '100%', padding: '9px 12px', fontSize: 13,
+                border: '1.5px solid var(--border2)', borderRadius: 'var(--r-sm)',
+                fontFamily: 'var(--font-body)', color: 'var(--text)',
+                background: 'var(--white)', outline: 'none', cursor: 'pointer',
+                boxSizing: 'border-box',
+              }}
+            >
+              <option value="ofertas">Productos en oferta</option>
+              <option value="badge">Badge especifico</option>
+              <option value="custom">Link personalizado</option>
+            </select>
+          </div>
+        </div>
+
+        {/* Secondary input — badge picker or custom URL */}
+        {promoFilterType === 'badge' && (
+          <div style={{ marginBottom: 16 }}>
+            <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', letterSpacing: 1, textTransform: 'uppercase', display: 'block', marginBottom: 6 }}>
+              Badge
+            </label>
+            <select
+              value={promoBadge}
+              onChange={e => setPromoBadge(e.target.value)}
+              style={{
+                padding: '9px 12px', fontSize: 13,
+                border: '1.5px solid var(--border2)', borderRadius: 'var(--r-sm)',
+                fontFamily: 'var(--font-body)', color: 'var(--text)',
+                background: 'var(--white)', outline: 'none', cursor: 'pointer',
+              }}
+            >
+              {BADGE_OPTIONS.map(b => <option key={b} value={b}>{b}</option>)}
+            </select>
+          </div>
+        )}
+
+        {promoFilterType === 'custom' && (
+          <div style={{ marginBottom: 16 }}>
+            <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', letterSpacing: 1, textTransform: 'uppercase', display: 'block', marginBottom: 6 }}>
+              URL personalizada
+            </label>
+            <input
+              value={promoCustomUrl}
+              onChange={e => setPromoCustomUrl(e.target.value)}
+              placeholder="/catalogo?..."
+              style={{
+                width: '100%', padding: '9px 12px', fontSize: 13,
+                border: '1.5px solid var(--border2)', borderRadius: 'var(--r-sm)',
+                fontFamily: 'var(--font-body)', color: 'var(--text-soft)',
+                outline: 'none', boxSizing: 'border-box',
+              }}
+              onFocus={e => (e.target.style.borderColor = 'var(--hot)')}
+              onBlur={e => (e.target.style.borderColor = 'var(--border2)')}
+            />
+          </div>
+        )}
+
+        {/* Live preview */}
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: 12,
+          padding: '10px 16px',
+          background: 'rgba(235,25,130,0.06)',
+          borderRadius: 'var(--r-sm)',
+          marginBottom: 16,
+          flexWrap: 'wrap',
+        }}>
+          <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: 1 }}>Vista previa:</span>
+          {/* Pill preview */}
+          <span style={{
+            display: 'inline-flex', alignItems: 'center', gap: 6,
+            background: 'var(--hot)', color: '#fff',
+            borderRadius: 'var(--r-pill)', padding: '6px 16px',
+            fontSize: 13, fontWeight: 600,
+            fontFamily: 'var(--font-body)',
+          }}>
+            {promoEmoji} {promoName || 'Nombre'}
+          </span>
+          <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>→</span>
+          <code style={{ fontSize: 12, color: 'var(--hot)', background: 'rgba(235,25,130,0.08)', padding: '3px 8px', borderRadius: 4 }}>
+            {computePromoHref()}
+          </code>
+        </div>
+
+        {/* Save promo */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+          <Button onClick={handlePromoSave} disabled={promoSaving}>
+            {promoSaving ? 'Guardando...' : 'Guardar link promocional'}
+          </Button>
+          {promoFeedback && (
+            <span style={{
+              fontSize: 14, fontWeight: 600,
+              color: promoFeedback.includes('Error') ? '#ef4444' : '#25D366',
+            }}>
+              {promoFeedback.includes('Error') ? '! ' : '> '}{promoFeedback}
+            </span>
+          )}
+        </div>
+      </div>
 
       {/* Category tabs */}
       <div style={{ display: 'flex', gap: 8, marginBottom: 28, flexWrap: 'wrap' }}>

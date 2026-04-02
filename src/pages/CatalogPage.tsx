@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { SEED_PRODUCTS, SEED_CATEGORIES, SEED_BRANDS } from '../data/seedData';
 import { ProductGrid } from '../components/product/ProductGrid';
@@ -12,13 +12,15 @@ const SORT_OPTIONS = [
   { value: 'nuevo',       label: 'Más nuevo' },
 ];
 
-const FILTER_PILLS = [
-  { key: 'nuevo',      label: 'Nuevo',         icon: '✦' },
-  { key: 'bestseller', label: 'Bestsellers',   icon: '🏆' },
-  { key: 'oferta',     label: 'Ofertas',       icon: '🔥' },
-  { key: 'vegano',     label: 'Vegano',        icon: '🌿' },
-  { key: 'crueldad',   label: 'Sin Crueldad',  icon: '🐰' },
-];
+// Metadata map for known badge types — icon + display label
+const BADGE_META: Record<string, { icon: string; label: string }> = {
+  'Nuevo':        { icon: '✦',  label: 'Nuevo' },
+  'Bestseller':   { icon: '🏆', label: 'Bestsellers' },
+  'Top Rated':    { icon: '⭐', label: 'Top Rated' },
+  'Viral':        { icon: '🔥', label: 'Viral' },
+  'Vegano':       { icon: '🌿', label: 'Vegano' },
+  'Sin Crueldad': { icon: '🐰', label: 'Sin Crueldad' },
+};
 
 export function CatalogPage() {
   const [params, setParams] = useSearchParams();
@@ -40,6 +42,34 @@ export function CatalogPage() {
   // Only women's products in main catalog — men's is separate page
   const womenCategories = SEED_CATEGORIES.filter(c => !c.is_men);
   const allProducts = SEED_PRODUCTS.filter(p => p.is_visible && p.category !== 'hombres');
+
+  // Build dynamic pills from actual badge values present in product data
+  const dynamicPills = useMemo(() => {
+    const seen = new Set<string>();
+    for (const p of allProducts) { if (p.badge) seen.add(p.badge); }
+    const pills = [...seen].map(badge => ({
+      key: badge.toLowerCase().replace(/\s+/g, '-'),
+      label: BADGE_META[badge]?.label ?? badge,
+      icon: BADGE_META[badge]?.icon ?? '✦',
+      badgeValue: badge,
+    }));
+    // Always add Ofertas pill if any products are discounted
+    if (allProducts.some(p => p.sale_percent > 0)) {
+      pills.push({ key: 'ofertas', label: 'Ofertas', icon: '🔥', badgeValue: '__ofertas__' });
+    }
+    return pills;
+  }, [allProducts]);
+
+  // On mount: pre-activate pills from URL params so promo nav deep-links work
+  useEffect(() => {
+    const oferta = params.get('oferta');
+    const badge  = params.get('badge');
+
+    if (oferta === 'true') setActivePills(prev => [...new Set([...prev, 'ofertas'])]);
+    if (badge)             setActivePills(prev => [...new Set([...prev, badge.toLowerCase().replace(/\s+/g, '-')])]);
+  // Run only once on mount — intentionally omitting params from deps
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Dynamic brands — only show brands that have products in the selected category
   const brandsInCategory = useMemo(() => {
@@ -141,9 +171,15 @@ export function CatalogPage() {
       const q = searchQ.toLowerCase();
       result = result.filter(p => p.name.toLowerCase().includes(q) || p.description.toLowerCase().includes(q) || (p.brand || '').toLowerCase().includes(q));
     }
-    if (activePills.includes('oferta'))     result = result.filter(p => p.sale_percent > 0);
-    if (activePills.includes('nuevo'))      result = result.filter(p => p.badge === 'Nuevo');
-    if (activePills.includes('bestseller')) result = result.filter(p => p.badge === 'Bestseller');
+    // Apply dynamic pill filters — 'ofertas' is discount-based, all others match by badge value
+    for (const key of activePills) {
+      if (key === 'ofertas') {
+        result = result.filter(p => p.sale_percent > 0);
+      } else {
+        const pill = dynamicPills.find(p => p.key === key);
+        if (pill) result = result.filter(p => p.badge === pill.badgeValue);
+      }
+    }
     if (minPrice > 200) result = result.filter(p => p.price >= minPrice);
     if (maxPrice < 5000) result = result.filter(p => p.price <= maxPrice);
     if (selectedBrands.length) result = result.filter(p => selectedBrands.includes(p.brand || ''));
@@ -160,13 +196,13 @@ export function CatalogPage() {
     if (sort === 'precio-asc')  result.sort((a, b) => a.price - b.price);
     if (sort === 'precio-desc') result.sort((a, b) => b.price - a.price);
     return result;
-  }, [category, searchQ, minPrice, maxPrice, selectedBrands, sort, activePills, selectedLabels]);
+  }, [category, searchQ, minPrice, maxPrice, selectedBrands, sort, activePills, selectedLabels, dynamicPills]);
 
   // Collect all active filter tags for the tag strip
   const activeFilterTags: { label: string; onRemove: () => void }[] = [];
   if (searchQ) activeFilterTags.push({ label: `"${searchQ}"`, onRemove: removeSearchFilter });
   activePills.forEach(key => {
-    const pill = FILTER_PILLS.find(p => p.key === key);
+    const pill = dynamicPills.find(p => p.key === key);
     if (pill) activeFilterTags.push({ label: `${pill.icon} ${pill.label}`, onRemove: () => togglePill(key) });
   });
   selectedBrands.forEach(b => {
@@ -460,36 +496,38 @@ export function CatalogPage() {
             </div>
           )}
 
-          {/* Filter pills row */}
-          <div style={{
-            display: 'flex', gap: 10, flexWrap: 'wrap',
-            marginBottom: 20,
-          }}>
-            {FILTER_PILLS.map(pill => {
-              const active = activePills.includes(pill.key);
-              return (
-                <button key={pill.key} onClick={() => togglePill(pill.key)} style={{
-                  display: 'flex', alignItems: 'center', gap: 8,
-                  padding: '10px 18px',
-                  borderRadius: 'var(--r-sm)',
-                  border: active ? '2px solid var(--hot)' : '1.5px solid var(--border2)',
-                  background: active ? 'rgba(235,25,130,0.06)' : 'var(--white)',
-                  color: active ? 'var(--hot)' : 'var(--text-soft)',
-                  fontSize: 13, fontWeight: 600,
-                  fontFamily: 'var(--font-body)',
-                  cursor: 'pointer',
-                  transition: 'all 0.15s',
-                  whiteSpace: 'nowrap',
-                }}
-                  onMouseEnter={e => { if (!active) (e.currentTarget as HTMLElement).style.borderColor = 'var(--hot)'; }}
-                  onMouseLeave={e => { if (!active) (e.currentTarget as HTMLElement).style.borderColor = 'var(--border2)'; }}
-                >
-                  <span style={{ fontSize: 15 }}>{pill.icon}</span>
-                  {pill.label}
-                </button>
-              );
-            })}
-          </div>
+          {/* Filter pills row — generated dynamically from actual product badge values */}
+          {dynamicPills.length > 0 && (
+            <div style={{
+              display: 'flex', gap: 10, flexWrap: 'wrap',
+              marginBottom: 20,
+            }}>
+              {dynamicPills.map(pill => {
+                const active = activePills.includes(pill.key);
+                return (
+                  <button key={pill.key} onClick={() => togglePill(pill.key)} style={{
+                    display: 'flex', alignItems: 'center', gap: 8,
+                    padding: '10px 18px',
+                    borderRadius: 'var(--r-sm)',
+                    border: active ? '2px solid var(--hot)' : '1.5px solid var(--border2)',
+                    background: active ? 'rgba(235,25,130,0.06)' : 'var(--white)',
+                    color: active ? 'var(--hot)' : 'var(--text-soft)',
+                    fontSize: 13, fontWeight: 600,
+                    fontFamily: 'var(--font-body)',
+                    cursor: 'pointer',
+                    transition: 'all 0.15s',
+                    whiteSpace: 'nowrap',
+                  }}
+                    onMouseEnter={e => { if (!active) (e.currentTarget as HTMLElement).style.borderColor = 'var(--hot)'; }}
+                    onMouseLeave={e => { if (!active) (e.currentTarget as HTMLElement).style.borderColor = 'var(--border2)'; }}
+                  >
+                    <span style={{ fontSize: 15 }}>{pill.icon}</span>
+                    {pill.label}
+                  </button>
+                );
+              })}
+            </div>
+          )}
 
           {/* Results count + sort */}
           <div style={{

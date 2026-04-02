@@ -1,16 +1,16 @@
 import { useState } from 'react';
 import { ProductCard } from './ProductCard';
 import { ProductModal } from './ProductModal';
-import type { SeedProduct } from '../../data/seedData';
+import type { DisplayProduct } from '../../types/database';
 
 interface ProductGridProps {
-  products: SeedProduct[];
+  products: DisplayProduct[];
   isMen?: boolean;
   columns?: number;
 }
 
 export function ProductGrid({ products, isMen = false, columns = 3 }: ProductGridProps) {
-  const [selected, setSelected] = useState<SeedProduct | null>(null);
+  const [selected, setSelected] = useState<DisplayProduct | null>(null);
 
   return (
     <>

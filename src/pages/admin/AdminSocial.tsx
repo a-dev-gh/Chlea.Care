@@ -44,12 +44,13 @@ export function AdminSocial() {
 
     if (supabase) {
       if (isNew) {
-        await adminInsert<InstagramPost>('instagram_posts', editing);
+        const { error } = await adminInsert<InstagramPost>('instagram_posts', editing);
+        if (error) { alert('Error al guardar: ' + error); } else { await loadPosts(); }
       } else {
         const { id, created_at, ...rest } = editing as any;
-        await adminUpdate<InstagramPost>('instagram_posts', editing.id!, rest);
+        const { error } = await adminUpdate<InstagramPost>('instagram_posts', editing.id!, rest);
+        if (error) { alert('Error al guardar: ' + error); } else { await loadPosts(); }
       }
-      await loadPosts();
     } else {
       // Local fallback
       if (isNew) {
@@ -66,7 +67,8 @@ export function AdminSocial() {
 
   async function handleDelete(id: string) {
     if (supabase) {
-      const ok = await adminDelete('instagram_posts', id);
+      const { ok, error } = await adminDelete('instagram_posts', id);
+      if (error) alert('Error al eliminar: ' + error);
       if (ok) await loadPosts();
     } else {
       setPosts(prev => prev.filter(p => p.id !== id));
@@ -83,7 +85,7 @@ export function AdminSocial() {
     setPosts(updated);
 
     if (supabase) {
-      // Update both swapped items
+      // Update both swapped items (ignore individual errors for reordering)
       await Promise.all([
         adminUpdate('instagram_posts', updated[i].id, { sort_order: i }),
         adminUpdate('instagram_posts', updated[i - 1].id, { sort_order: i - 1 }),
@@ -110,7 +112,8 @@ export function AdminSocial() {
   async function toggleVisible(post: InstagramPost) {
     const newVal = !post.is_visible;
     if (supabase) {
-      await adminUpdate('instagram_posts', post.id, { is_visible: newVal });
+      const { error } = await adminUpdate('instagram_posts', post.id, { is_visible: newVal });
+      if (error) alert('Error: ' + error);
       await loadPosts();
     } else {
       setPosts(prev => prev.map(p => p.id === post.id ? { ...p, is_visible: newVal } : p));

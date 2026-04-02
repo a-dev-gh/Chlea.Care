@@ -72,10 +72,12 @@ export function AdminBlog() {
     if (supabase) {
       if (isExisting) {
         const { id, created_at, ...rest } = payload as any;
-        await adminUpdate<BlogPost>('blog_posts', editing.id!, rest);
+        const { error } = await adminUpdate<BlogPost>('blog_posts', editing.id!, rest);
+        if (error) { alert('Error al guardar: ' + error); setSaving(false); return; }
       } else {
         const { id, created_at, ...rest } = payload as any;
-        await adminInsert<BlogPost>('blog_posts', rest);
+        const { error } = await adminInsert<BlogPost>('blog_posts', rest);
+        if (error) { alert('Error al guardar: ' + error); setSaving(false); return; }
       }
       await loadPosts();
     } else {
@@ -97,7 +99,8 @@ export function AdminBlog() {
   async function toggleVisibility(post: BlogPost) {
     const newVal = !post.is_visible;
     if (supabase) {
-      await adminUpdate<BlogPost>('blog_posts', post.id, { is_visible: newVal } as any);
+      const { error } = await adminUpdate<BlogPost>('blog_posts', post.id, { is_visible: newVal } as any);
+      if (error) alert('Error: ' + error);
       await loadPosts();
     } else {
       setPosts(prev => prev.map(p => p.id === post.id ? { ...p, is_visible: newVal } : p));
@@ -106,7 +109,8 @@ export function AdminBlog() {
 
   async function deletePost(id: string) {
     if (supabase) {
-      const ok = await adminDelete('blog_posts', id);
+      const { ok, error } = await adminDelete('blog_posts', id);
+      if (error) alert('Error al eliminar: ' + error);
       if (ok) await loadPosts();
     } else {
       setPosts(prev => prev.filter(p => p.id !== id));

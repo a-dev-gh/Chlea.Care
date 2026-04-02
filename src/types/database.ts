@@ -37,6 +37,8 @@ export interface Product {
   /** Discount percentage (0 when not on sale). */
   sale_percent: number;
   description: string;
+  /** Human-readable brand name (used for display). */
+  brand?: string;
   /** Slug linking to the brand row. Null for unbranded items. */
   brand_slug: string | null;
   image_url: string;
@@ -169,6 +171,64 @@ export interface WhatsAppOrder {
   created_at: string;
 }
 
+/** A product review left by a logged-in user. */
+export interface ProductReview {
+  id: string;
+  product_id: string;
+  user_id: string;
+  user_name: string;
+  rating: number;
+  text: string;
+  created_at: string;
+}
+
+/** A homepage testimonial submitted by a visitor (admin-approved). */
+export interface Testimonial {
+  id: string;
+  name: string;
+  rating: number;
+  text: string;
+  photo_url: string;
+  is_approved: boolean;
+  created_at: string;
+}
+
+/** A label group for catalog filters (e.g. "Tipo de Cabello" with values ["Rizado", "Lacio"]). */
+export interface LabelGroup {
+  id: string;
+  /** Human-readable group name. */
+  name: string;
+  /** Array of sub-values within this group. */
+  values: string[];
+  sort_order: number;
+  created_at: string;
+}
+
+// ---------------------------------------------------------------------------
+// Display shape — minimal type for product cards / modal / grids.
+// Both SeedProduct and the full DB Product satisfy this interface.
+// ---------------------------------------------------------------------------
+
+export interface DisplayProduct {
+  id: string;
+  name: string;
+  price: number;
+  category: string;
+  badge: string;
+  is_hot: boolean;
+  sale_percent: number;
+  description: string;
+  brand?: string;
+  image_url?: string;
+  image_urls?: string[];
+  is_visible: boolean;
+  labels?: Record<string, string[]>;
+  /** Product must be requested via WhatsApp — not add-to-cart. */
+  is_by_request?: boolean;
+  /** Whether the product is currently in stock. */
+  is_in_stock?: boolean;
+}
+
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
@@ -184,7 +244,10 @@ export type TableName =
   | 'nav_dropdowns'
   | 'user_lists'
   | 'list_items'
-  | 'whatsapp_orders';
+  | 'whatsapp_orders'
+  | 'label_groups'
+  | 'product_reviews'
+  | 'testimonials';
 
 /**
  * Typed map of all known site-setting keys.
@@ -211,4 +274,10 @@ export interface SiteSettings {
   politicas_envio?: string;
   /** Refund policy page content (plain text with **bold** and paragraph breaks). */
   politicas_reembolso?: string;
+  /** Promotional nav slot — display name (e.g. "Ofertas", "Verano"). */
+  promo_nav_name?: string;
+  /** Promotional nav slot — target URL (e.g. "/catalogo?oferta=true"). */
+  promo_nav_href?: string;
+  /** Promotional nav slot — emoji icon for the pill. */
+  promo_nav_emoji?: string;
 }

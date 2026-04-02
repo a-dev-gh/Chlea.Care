@@ -357,8 +357,117 @@ CREATE POLICY "whatsapp_orders: admin update"
 
 
 -- =========================================================================
+-- 11. LABEL_GROUPS (main label categories + sub-values for catalog filters)
+-- =========================================================================
+CREATE TABLE public.label_groups (
+  id         uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  name       text NOT NULL UNIQUE,
+  values     jsonb NOT NULL DEFAULT '[]'::jsonb,
+  sort_order integer NOT NULL DEFAULT 0,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+
+ALTER TABLE public.label_groups ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "label_groups: public read"
+  ON public.label_groups FOR SELECT
+  USING (true);
+
+CREATE POLICY "label_groups: admin insert"
+  ON public.label_groups FOR INSERT
+  WITH CHECK (public.is_admin());
+
+CREATE POLICY "label_groups: admin update"
+  ON public.label_groups FOR UPDATE
+  USING (public.is_admin());
+
+CREATE POLICY "label_groups: admin delete"
+  ON public.label_groups FOR DELETE
+  USING (public.is_admin());
+
+
+-- =========================================================================
+-- 12. Product columns added post-launch
+-- =========================================================================
+ALTER TABLE public.products
+  ADD COLUMN IF NOT EXISTS image_urls   jsonb   NOT NULL DEFAULT '[]'::jsonb,
+  ADD COLUMN IF NOT EXISTS is_in_stock  boolean NOT NULL DEFAULT true,
+  ADD COLUMN IF NOT EXISTS is_by_request boolean NOT NULL DEFAULT false;
+
+
+-- =========================================================================
+-- 13. PRODUCT_REVIEWS (per-product, requires login)
+-- =========================================================================
+CREATE TABLE public.product_reviews (
+  id         uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  product_id uuid NOT NULL REFERENCES public.products(id) ON DELETE CASCADE,
+  user_id    uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  user_name  text NOT NULL DEFAULT '',
+  rating     integer NOT NULL CHECK (rating BETWEEN 1 AND 5),
+  text       text NOT NULL DEFAULT '',
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+
+ALTER TABLE public.product_reviews ENABLE ROW LEVEL SECURITY;
+
+-- Anyone can read reviews
+CREATE POLICY "product_reviews: public read"
+  ON public.product_reviews FOR SELECT
+  USING (true);
+
+-- Authenticated users can insert their own reviews
+CREATE POLICY "product_reviews: own insert"
+  ON public.product_reviews FOR INSERT
+  WITH CHECK (user_id = auth.uid());
+
+-- Users can delete their own reviews, admins can delete any
+CREATE POLICY "product_reviews: own or admin delete"
+  ON public.product_reviews FOR DELETE
+  USING (user_id = auth.uid() OR public.is_admin());
+
+
+-- =========================================================================
+-- 14. TESTIMONIALS (homepage, admin-approved)
+-- =========================================================================
+CREATE TABLE public.testimonials (
+  id          uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  name        text NOT NULL,
+  rating      integer NOT NULL DEFAULT 5 CHECK (rating BETWEEN 1 AND 5),
+  text        text NOT NULL,
+  photo_url   text NOT NULL DEFAULT '',
+  is_approved boolean NOT NULL DEFAULT false,
+  created_at  timestamptz NOT NULL DEFAULT now()
+);
+
+ALTER TABLE public.testimonials ENABLE ROW LEVEL SECURITY;
+
+-- Public can only see approved testimonials
+CREATE POLICY "testimonials: public read approved"
+  ON public.testimonials FOR SELECT
+  USING (is_approved = true OR public.is_admin());
+
+-- Anyone (including anon) can submit a testimonial
+CREATE POLICY "testimonials: public insert"
+  ON public.testimonials FOR INSERT
+  WITH CHECK (true);
+
+-- Only admins can update (approve/reject)
+CREATE POLICY "testimonials: admin update"
+  ON public.testimonials FOR UPDATE
+  USING (public.is_admin());
+
+-- Only admins can delete
+CREATE POLICY "testimonials: admin delete"
+  ON public.testimonials FOR DELETE
+  USING (public.is_admin());
+
+
+-- =========================================================================
 -- INDEXES (optional but recommended)
 -- =========================================================================
+CREATE INDEX idx_product_reviews_product ON public.product_reviews(product_id);
+CREATE INDEX idx_product_reviews_user    ON public.product_reviews(user_id);
+CREATE INDEX idx_testimonials_approved   ON public.testimonials(is_approved);
 CREATE INDEX idx_products_brand_slug ON public.products(brand_slug);
 CREATE INDEX idx_products_category   ON public.products(category);
 CREATE INDEX idx_products_is_visible ON public.products(is_visible);

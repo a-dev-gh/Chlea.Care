@@ -12,6 +12,7 @@ import { BrandPage } from './pages/BrandPage';
 import { AccountPage } from './pages/AccountPage';
 import { MensCatalogPage } from './pages/MensCatalogPage';
 import { AdminLayout } from './pages/admin/AdminLayout';
+import { AdminLoginPage } from './pages/admin/AdminLoginPage';
 import { AdminProductos } from './pages/admin/AdminProductos';
 import { AdminOrdenes } from './pages/admin/AdminOrdenes';
 import { AdminConfiguracion } from './pages/admin/AdminConfiguracion';
@@ -19,6 +20,8 @@ import { AdminMarcas } from './pages/admin/AdminMarcas';
 import { AdminSocial } from './pages/admin/AdminSocial';
 import { AdminNavegacion } from './pages/admin/AdminNavegacion';
 import { AdminBlog } from './pages/admin/AdminBlog';
+import { AdminEtiquetas } from './pages/admin/AdminEtiquetas';
+import { AdminTestimonios } from './pages/admin/AdminTestimonios';
 import { BlogPage } from './pages/BlogPage';
 import { BlogPostPage } from './pages/BlogPostPage';
 import { PoliticasEnvioPage } from './pages/PoliticasEnvioPage';
@@ -57,14 +60,18 @@ export default function App() {
   if (isStudio) {
     return (
       <Routes>
+        {/* Standalone login — outside AdminLayout to prevent infinite redirect */}
+        <Route path="/login" element={<AdminLoginPage />} />
         <Route path="/" element={<AdminLayout />}>
           <Route index element={<Navigate to="/productos" replace />} />
           <Route path="productos" element={<AdminProductos />} />
           <Route path="marcas" element={<AdminMarcas />} />
+          <Route path="etiquetas" element={<AdminEtiquetas />} />
           <Route path="ordenes" element={<AdminOrdenes />} />
           <Route path="social" element={<AdminSocial />} />
           <Route path="navegacion" element={<AdminNavegacion />} />
           <Route path="blog" element={<AdminBlog />} />
+          <Route path="testimonios" element={<AdminTestimonios />} />
           <Route path="configuracion" element={<AdminConfiguracion />} />
         </Route>
         <Route path="*" element={<Navigate to="/productos" replace />} />
@@ -93,10 +100,12 @@ export default function App() {
         <Route index element={<Navigate to="/admin/productos" replace />} />
         <Route path="productos"     element={<AdminProductos />} />
         <Route path="marcas"        element={<AdminMarcas />} />
+        <Route path="etiquetas"     element={<AdminEtiquetas />} />
         <Route path="ordenes"       element={<AdminOrdenes />} />
         <Route path="social"        element={<AdminSocial />} />
         <Route path="navegacion"   element={<AdminNavegacion />} />
         <Route path="blog"         element={<AdminBlog />} />
+        <Route path="testimonios"  element={<AdminTestimonios />} />
         <Route path="configuracion" element={<AdminConfiguracion />} />
       </Route>
 

@@ -4,12 +4,13 @@ import { useCart } from '../../hooks/useCart';
 import { useLists } from '../../hooks/useLists';
 import { ListPicker } from './ListPicker';
 import { formatPrice } from '../../utils/formatPrice';
-import type { SeedProduct } from '../../data/seedData';
+import { buildProductInquiry, openWhatsApp } from '../../utils/whatsapp';
+import type { DisplayProduct } from '../../types/database';
 
 interface ProductCardProps {
-  product: SeedProduct;
+  product: DisplayProduct;
   isMen?: boolean;
-  onOpenModal?: (p: SeedProduct) => void;
+  onOpenModal?: (p: DisplayProduct) => void;
 }
 
 // Soft gradient placeholders per category
@@ -47,8 +48,15 @@ export function ProductCard({ product, isMen = false, onOpenModal }: ProductCard
     ? Math.round(product.price * (1 - product.sale_percent / 100))
     : null;
 
+  const isByRequest = product.is_by_request ?? false;
+
   function handleAdd(e: React.MouseEvent) {
     e.stopPropagation();
+    if (isByRequest) {
+      // By-request products go straight to WhatsApp
+      openWhatsApp(buildProductInquiry(product.name));
+      return;
+    }
     addItem({ id: product.id, name: product.name, price: salePrice ?? product.price });
     setAdding(true);
     setTimeout(() => setAdding(false), 1200);
@@ -157,7 +165,7 @@ export function ProductCard({ product, isMen = false, onOpenModal }: ProductCard
           <button
             onClick={handleAdd}
             style={{
-              background: adding ? '#25D366' : 'var(--hot)',
+              background: isByRequest ? '#25D366' : adding ? '#25D366' : 'var(--hot)',
               color: '#fff',
               border: 'none',
               borderRadius: 'var(--r-pill)',
@@ -170,7 +178,7 @@ export function ProductCard({ product, isMen = false, onOpenModal }: ProductCard
               whiteSpace: 'nowrap',
             }}
           >
-            {adding ? '✓ Añadido' : 'Añadir'}
+            {isByRequest ? 'Solicitar' : adding ? '✓ Añadido' : 'Añadir'}
           </button>
         </div>
       </div>
