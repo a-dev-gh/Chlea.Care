@@ -152,7 +152,7 @@ export function AdminLoginPage() {
         {/* Logo + subtitle */}
         <div style={logoRowStyle}>
           <img
-            src="/assets/chlea-care-logo.svg"
+            src="/chlea-care-logo.svg"
             alt="Chlea Care"
             style={{ height: 36 }}
           />
