@@ -1,8 +1,7 @@
 import { useState, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { SEED_PRODUCTS } from '../data/seedData';
+import { useProducts } from '../hooks/useProducts';
 import { ProductGrid } from '../components/product/ProductGrid';
-import { formatPrice } from '../utils/formatPrice';
 
 const SORT_OPTIONS = [
   { value: 'relevancia',  label: 'Relevancia' },
@@ -31,8 +30,17 @@ export function MensCatalogPage() {
   const [selectedLabels, setSelectedLabels] = useState<Record<string, string[]>>({});
 
   const searchQ = params.get('q') || '';
-  const menProducts = SEED_PRODUCTS.filter(p => p.category === 'hombres' && p.is_visible);
-  const allBrands = [...new Set(menProducts.map(p => p.brand).filter(Boolean))] as string[];
+
+  // Live data — useProducts already filters is_visible
+  const { allProducts, loading } = useProducts();
+  const menProducts = useMemo(
+    () => allProducts.filter(p => p.category === 'hombres'),
+    [allProducts]
+  );
+  const allBrands = useMemo(
+    () => [...new Set(menProducts.map(p => p.brand).filter(Boolean))] as string[],
+    [menProducts]
+  );
 
   // Collect dynamic label groups
   const labelGroups = useMemo(() => {
@@ -47,7 +55,7 @@ export function MensCatalogPage() {
     return Object.entries(groups)
       .map(([name, valuesSet]) => ({ name, values: [...valuesSet].sort() }))
       .sort((a, b) => a.name.localeCompare(b.name));
-  }, []);
+  }, [menProducts]);
 
   function togglePill(key: string) {
     setActivePills(prev => prev.includes(key) ? prev.filter(k => k !== key) : [...prev, key]);
@@ -96,7 +104,7 @@ export function MensCatalogPage() {
     if (sort === 'precio-asc')  result.sort((a, b) => a.price - b.price);
     if (sort === 'precio-desc') result.sort((a, b) => b.price - a.price);
     return result;
-  }, [searchQ, minPrice, maxPrice, selectedBrands, sort, activePills, selectedLabels]);
+  }, [menProducts, searchQ, minPrice, maxPrice, selectedBrands, sort, activePills, selectedLabels]);
 
   const FilterSection = ({ title, isOpen, onToggle, children }: {
     title: string; isOpen: boolean; onToggle: () => void; children: React.ReactNode;
@@ -179,18 +187,20 @@ export function MensCatalogPage() {
       </FilterSection>
 
       {/* Brand */}
-      <FilterSection title="Marca" isOpen={brandOpen} onToggle={() => setBrandOpen(!brandOpen)}>
-        {allBrands.map(brand => (
-          <label key={brand} style={{
-            display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10,
-            cursor: 'pointer', fontSize: 14, color: 'rgba(254,250,251,0.65)',
-          }}>
-            <input type="checkbox" checked={selectedBrands.includes(brand)} onChange={() => toggleBrand(brand)}
-              style={{ accentColor: 'var(--pink)', width: 16, height: 16 }} />
-            {brand}
-          </label>
-        ))}
-      </FilterSection>
+      {allBrands.length > 0 && (
+        <FilterSection title="Marca" isOpen={brandOpen} onToggle={() => setBrandOpen(!brandOpen)}>
+          {allBrands.map(brand => (
+            <label key={brand} style={{
+              display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10,
+              cursor: 'pointer', fontSize: 14, color: 'rgba(254,250,251,0.65)',
+            }}>
+              <input type="checkbox" checked={selectedBrands.includes(brand)} onChange={() => toggleBrand(brand)}
+                style={{ accentColor: 'var(--pink)', width: 16, height: 16 }} />
+              {brand}
+            </label>
+          ))}
+        </FilterSection>
+      )}
 
       {/* Dynamic labels */}
       {labelGroups.map(group => (
@@ -273,7 +283,7 @@ export function MensCatalogPage() {
               marginBottom: 24, gap: 12,
             }}>
               <p style={{ fontSize: 14, color: 'rgba(254,250,251,0.5)' }}>
-                {filtered.length} resultado{filtered.length !== 1 ? 's' : ''}
+                {loading ? '...' : `${filtered.length} resultado${filtered.length !== 1 ? 's' : ''}`}
               </p>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                 <span style={{ fontSize: 13, color: 'rgba(254,250,251,0.5)', fontWeight: 500 }}>Ordenar:</span>
@@ -290,7 +300,11 @@ export function MensCatalogPage() {
             </div>
 
             {/* Product grid */}
-            {filtered.length > 0 ? (
+            {loading ? (
+              <div style={{ textAlign: 'center', padding: '80px 0', color: 'rgba(254,250,251,0.5)', fontSize: 15 }}>
+                Cargando productos...
+              </div>
+            ) : filtered.length > 0 ? (
               <ProductGrid products={filtered} isMen />
             ) : (
               <div style={{ textAlign: 'center', padding: '80px 0' }}>

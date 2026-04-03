@@ -1,9 +1,19 @@
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { SEED_BRANDS } from '../data/seedData';
+import { fetchBrands } from '../utils/db';
+import type { Brand } from '../types/database';
 
 export function BrandsCarousel() {
+  const [brands, setBrands] = useState<Brand[]>([]);
+
+  useEffect(() => {
+    fetchBrands().then(setBrands);
+  }, []);
+
   // Duplicate list for seamless infinite loop
-  const brands = [...SEED_BRANDS, ...SEED_BRANDS];
+  const doubled = [...brands, ...brands];
+
+  if (brands.length === 0) return null;
 
   return (
     <section style={{ padding: '64px 0', background: 'var(--cream)', overflow: 'hidden' }}>
@@ -23,15 +33,15 @@ export function BrandsCarousel() {
       {/* Row 1 — scrolls left */}
       <div className="marquee-track" style={{ marginBottom: 20 }}>
         <div className="marquee-strip marquee-left">
-          {brands.map((brand, i) => (
+          {doubled.map((brand, i) => (
             <Link
               key={`r1-${i}`}
               to={`/marcas/${brand.slug}`}
               className="brand-pill"
               title={brand.name}
             >
-              {brand.logo ? (
-                <img src={brand.logo} alt={brand.name} className="brand-pill-logo" />
+              {brand.logo_url ? (
+                <img src={brand.logo_url} alt={brand.name} className="brand-pill-logo" />
               ) : (
                 <span className="brand-pill-initial">{brand.name.charAt(0)}</span>
               )}
@@ -43,15 +53,15 @@ export function BrandsCarousel() {
       {/* Row 2 — scrolls right (reversed list for variety) */}
       <div className="marquee-track">
         <div className="marquee-strip marquee-right">
-          {[...brands].reverse().map((brand, i) => (
+          {[...doubled].reverse().map((brand, i) => (
             <Link
               key={`r2-${i}`}
               to={`/marcas/${brand.slug}`}
               className="brand-pill"
               title={brand.name}
             >
-              {brand.logo ? (
-                <img src={brand.logo} alt={brand.name} className="brand-pill-logo" />
+              {brand.logo_url ? (
+                <img src={brand.logo_url} alt={brand.name} className="brand-pill-logo" />
               ) : (
                 <span className="brand-pill-initial">{brand.name.charAt(0)}</span>
               )}

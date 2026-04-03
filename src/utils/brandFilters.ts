@@ -1,7 +1,4 @@
-import { SEED_BRANDS, SEED_PRODUCTS } from '../data/seedData';
-
-type Brand = (typeof SEED_BRANDS)[number];
-type Product = (typeof SEED_PRODUCTS)[number];
+import type { Brand, Product } from '../types/database';
 
 /**
  * Get brands that have at least 1 visible product in the given category.
@@ -9,13 +6,14 @@ type Product = (typeof SEED_PRODUCTS)[number];
  */
 export function getBrandsForCategory(
   category: string,
-  products: Product[] = SEED_PRODUCTS,
-  brands: Brand[] = SEED_BRANDS
+  products: Product[],
+  brands: Brand[]
 ): Brand[] {
   const brandNamesInCat = new Set<string>();
 
   for (const p of products) {
-    if (!p.is_visible || !p.brand) continue;
+    // fetchProducts already filters is_visible, but guard here too
+    if (!p.brand) continue;
     if (category && p.category !== category) continue;
     brandNamesInCat.add(p.brand);
   }
@@ -28,11 +26,11 @@ export function getBrandsForCategory(
  */
 export function getCategoriesForBrand(
   brandName: string,
-  products: Product[] = SEED_PRODUCTS
+  products: Product[]
 ): string[] {
   const cats = new Set<string>();
   for (const p of products) {
-    if (!p.is_visible || p.brand !== brandName) continue;
+    if (p.brand !== brandName) continue;
     cats.add(p.category);
   }
   return Array.from(cats);
@@ -42,26 +40,26 @@ export function getCategoriesForBrand(
  * Get all brands that have at least 1 visible product AND a logo.
  */
 export function getBrandsWithProducts(
-  products: Product[] = SEED_PRODUCTS,
-  brands: Brand[] = SEED_BRANDS
+  products: Product[],
+  brands: Brand[]
 ): Brand[] {
   const brandNamesWithProducts = new Set<string>();
   for (const p of products) {
-    if (!p.is_visible || !p.brand) continue;
+    if (!p.brand) continue;
     brandNamesWithProducts.add(p.brand);
   }
-  return brands.filter(b => brandNamesWithProducts.has(b.name) && b.logo);
+  return brands.filter(b => brandNamesWithProducts.has(b.name) && b.logo_url);
 }
 
 /**
  * Get category slugs that have at least 1 brand with products (for showing/hiding tabs).
  */
 export function getCategoriesWithBrands(
-  products: Product[] = SEED_PRODUCTS
+  products: Product[]
 ): string[] {
   const catBrands = new Map<string, Set<string>>();
   for (const p of products) {
-    if (!p.is_visible || !p.brand) continue;
+    if (!p.brand) continue;
     if (!catBrands.has(p.category)) catBrands.set(p.category, new Set());
     catBrands.get(p.category)!.add(p.brand);
   }

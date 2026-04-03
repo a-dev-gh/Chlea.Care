@@ -1,6 +1,9 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { SEED_PRODUCTS, SEED_CATEGORIES, SEED_BRANDS } from '../data/seedData';
+import { SEED_CATEGORIES } from '../data/seedData';
+import { useProducts } from '../hooks/useProducts';
+import { fetchBrands } from '../utils/db';
+import type { Brand } from '../types/database';
 import { ProductGrid } from '../components/product/ProductGrid';
 import { formatPrice } from '../utils/formatPrice';
 import { getBrandsForCategory } from '../utils/brandFilters';
@@ -35,14 +38,21 @@ export function CatalogPage() {
   const [labelGroupsOpen, setLabelGroupsOpen] = useState<Record<string, boolean>>({});
   const [selectedLabels, setSelectedLabels] = useState<Record<string, string[]>>({});
   const [catalogSearch, setCatalogSearch] = useState(params.get('q') || '');
+  const [brandsData, setBrandsData] = useState<Brand[]>([]);
 
-  const category   = params.get('categoria') || 'todos';
-  const searchQ    = params.get('q') || '';
-  const labelParam = params.get('label');
+  const category = params.get('categoria') || 'todos';
+  const searchQ  = params.get('q') || '';
 
+  // Live product data — useProducts already filters is_visible
+  const { allProducts: rawProducts, loading } = useProducts();
   // Only women's products in main catalog — men's is separate page
   const womenCategories = SEED_CATEGORIES.filter(c => !c.is_men);
-  const allProducts = SEED_PRODUCTS.filter(p => p.is_visible && p.category !== 'hombres');
+  const allProducts = rawProducts.filter(p => p.category !== 'hombres');
+
+  // Fetch brands once on mount
+  useEffect(() => {
+    fetchBrands().then(setBrandsData);
+  }, []);
 
   // Build dynamic pills from actual badge values present in product data
   const dynamicPills = useMemo(() => {
@@ -87,10 +97,10 @@ export function CatalogPage() {
   // Dynamic brands — only show brands that have products in the selected category
   const brandsInCategory = useMemo(() => {
     if (category === 'todos') {
-      return getBrandsForCategory('', allProducts, SEED_BRANDS);
+      return getBrandsForCategory('', allProducts, brandsData);
     }
-    return getBrandsForCategory(category, allProducts, SEED_BRANDS);
-  }, [category]);
+    return getBrandsForCategory(category, allProducts, brandsData);
+  }, [category, allProducts, brandsData]);
 
   // Collect dynamic label groups from products in current category
   const labelGroups = useMemo(() => {
@@ -565,7 +575,11 @@ export function CatalogPage() {
           </div>
 
           {/* Product grid */}
-          {filtered.length > 0 ? (
+          {loading ? (
+            <div style={{ textAlign: 'center', padding: '80px 0', color: 'var(--text-muted)', fontSize: 15 }}>
+              Cargando productos...
+            </div>
+          ) : filtered.length > 0 ? (
             <ProductGrid products={filtered} />
           ) : (
             <div style={{ textAlign: 'center', padding: '80px 0' }}>

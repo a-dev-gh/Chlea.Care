@@ -1,6 +1,9 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { SEED_BRANDS, SEED_PRODUCTS, SEED_CATEGORIES } from '../data/seedData';
+import { SEED_CATEGORIES } from '../data/seedData';
+import { fetchBrands } from '../utils/db';
+import { useProducts } from '../hooks/useProducts';
+import type { Brand } from '../types/database';
 import { getBrandsForCategory } from '../utils/brandFilters';
 
 const CATEGORY_TABS = [
@@ -11,6 +14,12 @@ const CATEGORY_TABS = [
 export function BrandsPage() {
   const [params, setParams] = useSearchParams();
   const activeTab = params.get('categoria') || 'todas';
+  const [brands, setBrands] = useState<Brand[]>([]);
+  const { allProducts } = useProducts();
+
+  useEffect(() => {
+    fetchBrands().then(setBrands);
+  }, []);
 
   function setTab(slug: string) {
     const next = new URLSearchParams();
@@ -20,8 +29,8 @@ export function BrandsPage() {
 
   // Filter brands: only show brands with products AND a logo
   const filteredBrands = activeTab === 'todas'
-    ? SEED_BRANDS.filter(b => b.logo && SEED_PRODUCTS.some(p => p.brand === b.name && p.is_visible))
-    : getBrandsForCategory(activeTab, SEED_PRODUCTS, SEED_BRANDS).filter(b => b.logo);
+    ? brands.filter(b => b.logo_url && allProducts.some(p => p.brand === b.name))
+    : getBrandsForCategory(activeTab, allProducts, brands).filter(b => b.logo_url);
 
   return (
     <div style={{ maxWidth: 1280, margin: '0 auto', padding: '56px 24px' }}>
@@ -42,7 +51,7 @@ export function BrandsPage() {
           const active = activeTab === tab.slug;
           // Only show tab if it has brands (or it's "todas")
           if (tab.slug !== 'todas') {
-            const brandsInTab = getBrandsForCategory(tab.slug, SEED_PRODUCTS, SEED_BRANDS).filter(b => b.logo);
+            const brandsInTab = getBrandsForCategory(tab.slug, allProducts, brands).filter(b => b.logo_url);
             if (brandsInTab.length === 0) return null;
           }
           return (
@@ -69,7 +78,7 @@ export function BrandsPage() {
       {/* Brands grid */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 28 }}>
         {filteredBrands.map(brand => {
-          const count = SEED_PRODUCTS.filter(p => p.brand === brand.name && p.is_visible).length;
+          const count = allProducts.filter(p => p.brand === brand.name).length;
           return (
             <Link key={brand.slug} to={`/marcas/${brand.slug}`} style={{ textDecoration: 'none' }}>
               <div style={{
@@ -99,8 +108,8 @@ export function BrandsPage() {
                   height: 72, display: 'flex', alignItems: 'center', justifyContent: 'center',
                   marginBottom: 20,
                 }}>
-                  {brand.logo ? (
-                    <img src={brand.logo} alt={brand.name} style={{
+                  {brand.logo_url ? (
+                    <img src={brand.logo_url} alt={brand.name} style={{
                       maxHeight: 56, maxWidth: 160, objectFit: 'contain',
                     }} />
                   ) : (

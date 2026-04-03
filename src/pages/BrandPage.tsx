@@ -1,10 +1,38 @@
+import { useState, useEffect, useMemo } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { SEED_BRANDS, SEED_PRODUCTS } from '../data/seedData';
+import { fetchBrands } from '../utils/db';
+import { useProducts } from '../hooks/useProducts';
+import type { Brand } from '../types/database';
 import { ProductGrid } from '../components/product/ProductGrid';
 
 export function BrandPage() {
   const { slug } = useParams<{ slug: string }>();
-  const brand = SEED_BRANDS.find(b => b.slug === slug);
+  const [brands, setBrands] = useState<Brand[]>([]);
+  const [brandsLoading, setBrandsLoading] = useState(true);
+  const { allProducts, loading: productsLoading } = useProducts();
+
+  useEffect(() => {
+    fetchBrands().then(data => {
+      setBrands(data);
+      setBrandsLoading(false);
+    });
+  }, []);
+
+  const brand = brands.find(b => b.slug === slug);
+  const products = useMemo(
+    () => allProducts.filter(p => p.brand === brand?.name),
+    [allProducts, brand]
+  );
+
+  const loading = brandsLoading || productsLoading;
+
+  if (loading) {
+    return (
+      <div style={{ textAlign: 'center', padding: '80px 24px', color: 'var(--text-muted)', fontSize: 15 }}>
+        Cargando...
+      </div>
+    );
+  }
 
   if (!brand) {
     return (
@@ -14,8 +42,6 @@ export function BrandPage() {
       </div>
     );
   }
-
-  const products = SEED_PRODUCTS.filter(p => p.brand === brand.name && p.is_visible);
 
   return (
     <div>
@@ -32,7 +58,13 @@ export function BrandPage() {
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           fontSize: 36,
           boxShadow: 'var(--shadow-md)',
-        }}>✨</div>
+        }}>
+          {brand.logo_url ? (
+            <img src={brand.logo_url} alt={brand.name} style={{ width: 56, height: 56, objectFit: 'contain' }} />
+          ) : (
+            <span>✨</span>
+          )}
+        </div>
         <p className="section-label" style={{ marginBottom: 8 }}>Marca oficial</p>
         <h1 style={{ fontFamily: 'var(--font-display)', fontSize: 'clamp(2rem,5vw,3.5rem)', fontWeight: 300, color: 'var(--text)' }}>
           {brand.name}

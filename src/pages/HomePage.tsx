@@ -1,8 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { useSiteSettings } from '../hooks/useSiteSettings';
+import { useProducts } from '../hooks/useProducts';
 import { ProductGrid } from '../components/product/ProductGrid';
-import { SEED_PRODUCTS } from '../data/seedData';
 import { BrandsCarousel } from '../components/BrandsCarousel';
 import { TestimonialsCarousel } from '../components/TestimonialsCarousel';
 import { OrderProcess } from '../components/OrderProcess';
@@ -17,8 +17,9 @@ const INSTAGRAM_POSTS = [
 
 export function HomePage() {
   const settings = useSiteSettings();
-  const hotProducts = SEED_PRODUCTS.filter(p => p.is_hot && p.category !== 'hombres').slice(0, 4);
-  const menProducts = SEED_PRODUCTS.filter(p => p.category === 'hombres');
+  const { allProducts } = useProducts();
+  const hotProducts = allProducts.filter(p => p.is_hot && p.category !== 'hombres').slice(0, 4);
+  const menProducts = allProducts.filter(p => p.category === 'hombres');
   const [menOpen, setMenOpen] = useState(false);
   const [igModal, setIgModal] = useState<{ url: string; type: 'post' | 'reel' } | null>(null);
 
