@@ -109,10 +109,15 @@ export function ProductCard({ product, isMen = false, onOpenModal }: ProductCard
             style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
         )}
 
-        {/* Badge top-left */}
+        {/* Badge top-left — render sale + custom badge separately so both show */}
         {(product.badge || product.sale_percent > 0) && (
-          <div style={{ position: 'absolute', top: 10, left: 10 }}>
-            <Badge text={product.badge} salePercent={product.sale_percent} />
+          <div style={{ position: 'absolute', top: 10, left: 10, display: 'flex', flexDirection: 'column', gap: 4 }}>
+            {product.sale_percent > 0 && (
+              <Badge salePercent={product.sale_percent} />
+            )}
+            {product.badge && product.badge !== 'Oferta' && (
+              <Badge text={product.badge} />
+            )}
           </div>
         )}
 

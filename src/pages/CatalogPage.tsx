@@ -38,6 +38,7 @@ export function CatalogPage() {
   const [labelGroupsOpen, setLabelGroupsOpen] = useState<Record<string, boolean>>({});
   const [selectedLabels, setSelectedLabels] = useState<Record<string, string[]>>({});
   const [catalogSearch, setCatalogSearch] = useState(params.get('q') || '');
+  const [activeEtiqueta, setActiveEtiqueta] = useState<string | null>(params.get('etiqueta'));
   const [brandsData, setBrandsData] = useState<Brand[]>([]);
 
   const category = params.get('categoria') || 'todos';
@@ -73,9 +74,10 @@ export function CatalogPage() {
 
   // On mount: pre-activate pills and label filters from URL params so promo nav deep-links work
   useEffect(() => {
-    const oferta = params.get('oferta');
-    const badge  = params.get('badge');
-    const label  = params.get('label');
+    const oferta   = params.get('oferta');
+    const badge    = params.get('badge');
+    const label    = params.get('label');
+    const etiqueta = params.get('etiqueta');
 
     if (oferta === 'true') setActivePills(prev => [...new Set([...prev, 'ofertas'])]);
     if (badge)             setActivePills(prev => [...new Set([...prev, badge.toLowerCase().replace(/\s+/g, '-')])]);
@@ -89,6 +91,11 @@ export function CatalogPage() {
           [decodeURIComponent(group)]: [decodeURIComponent(value)],
         }));
       }
+    }
+
+    // etiqueta param — store as active filter (resolved against product labels at filter time)
+    if (etiqueta) {
+      setActiveEtiqueta(decodeURIComponent(etiqueta));
     }
   // Run only once on mount — intentionally omitting params from deps
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -126,7 +133,7 @@ export function CatalogPage() {
   const hasActiveFilters = selectedBrands.length > 0 || activePills.length > 0 ||
     minPrice > 200 || maxPrice < 5000 ||
     Object.values(selectedLabels).some(v => v.length > 0) ||
-    searchQ.length > 0;
+    searchQ.length > 0 || !!activeEtiqueta;
 
   function resetAllFilters() {
     setSelectedBrands([]);
@@ -135,6 +142,7 @@ export function CatalogPage() {
     setMaxPrice(5000);
     setSelectedLabels({});
     setCatalogSearch('');
+    setActiveEtiqueta(null);
     const next = new URLSearchParams();
     if (category !== 'todos') next.set('categoria', category);
     setParams(next);
@@ -216,14 +224,35 @@ export function CatalogPage() {
       });
     }
 
+    // etiqueta filter — search all label groups for any product that has this value
+    if (activeEtiqueta) {
+      result = result.filter(p => {
+        if (!p.labels) return false;
+        return Object.values(p.labels).some(vals =>
+          vals.some(v => v.toLowerCase() === activeEtiqueta.toLowerCase())
+        );
+      });
+    }
+
     if (sort === 'precio-asc')  result.sort((a, b) => a.price - b.price);
     if (sort === 'precio-desc') result.sort((a, b) => b.price - a.price);
     return result;
-  }, [category, searchQ, minPrice, maxPrice, selectedBrands, sort, activePills, selectedLabels, dynamicPills]);
+  }, [category, searchQ, minPrice, maxPrice, selectedBrands, sort, activePills, selectedLabels, dynamicPills, activeEtiqueta]);
 
   // Collect all active filter tags for the tag strip
   const activeFilterTags: { label: string; onRemove: () => void }[] = [];
   if (searchQ) activeFilterTags.push({ label: `"${searchQ}"`, onRemove: removeSearchFilter });
+  if (activeEtiqueta) {
+    activeFilterTags.push({
+      label: activeEtiqueta,
+      onRemove: () => {
+        setActiveEtiqueta(null);
+        const next = new URLSearchParams(params);
+        next.delete('etiqueta');
+        setParams(next);
+      },
+    });
+  }
   activePills.forEach(key => {
     const pill = dynamicPills.find(p => p.key === key);
     if (pill) activeFilterTags.push({ label: `${pill.icon} ${pill.label}`, onRemove: () => togglePill(key) });

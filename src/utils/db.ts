@@ -108,18 +108,26 @@ function seedNavDropdowns(): Record<string, NavDropdown[]> {
 export async function fetchProducts(): Promise<Product[]> {
   if (!supabase) return seedProductsToProducts();
 
-  const { data, error } = await supabase
-    .from('products')
-    .select('*')
-    .eq('is_visible', true)
-    .order('created_at', { ascending: false });
+  const [{ data: prodData, error: prodError }, { data: brandData }] = await Promise.all([
+    supabase.from('products').select('*').eq('is_visible', true).order('created_at', { ascending: false }),
+    supabase.from('brands').select('name, slug'),
+  ]);
 
-  if (error) {
-    console.warn('[db] fetchProducts failed, using seed data:', error.message);
+  if (prodError || !prodData) {
+    console.warn('[db] fetchProducts failed, using seed data:', prodError?.message);
     return seedProductsToProducts();
   }
 
-  return data as Product[];
+  // Build slug→name map so product.brand is always a human-readable display name
+  const brandMap = new Map<string, string>();
+  if (brandData) {
+    for (const b of brandData) brandMap.set(b.slug, b.name);
+  }
+
+  return (prodData as Product[]).map(p => ({
+    ...p,
+    brand: p.brand_slug ? (brandMap.get(p.brand_slug) || p.brand_slug) : undefined,
+  }));
 }
 
 /** Fetch all brands ordered by name. */

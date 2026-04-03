@@ -12,7 +12,7 @@ const BADGE_STYLES: Record<string, React.CSSProperties> = {
 };
 
 interface BadgeProps {
-  text: string;
+  text?: string;
   salePercent?: number;
   style?: React.CSSProperties;
 }
@@ -20,8 +20,12 @@ interface BadgeProps {
 export function Badge({ text, salePercent, style }: BadgeProps) {
   if (!text && !salePercent) return null;
 
-  const label = salePercent ? `${salePercent}% OFF` : text;
-  const badgeStyle = BADGE_STYLES[text] ?? BADGE_STYLES.default;
+  // When salePercent is provided, always show sale label regardless of text
+  const label = salePercent ? `${salePercent}% OFF` : (text || '');
+  // Use sale style for sale badge; otherwise look up by text
+  const badgeStyle = salePercent
+    ? BADGE_STYLES['Oferta']
+    : (BADGE_STYLES[text || ''] ?? BADGE_STYLES.default);
 
   return (
     <span

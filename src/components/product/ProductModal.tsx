@@ -331,10 +331,15 @@ export function ProductModal({ product, onClose }: ProductModalProps) {
               </div>
             )}
 
-            {/* Badge overlay */}
+            {/* Badge overlay — render sale + custom badge separately so both show */}
             {(product.badge || product.sale_percent > 0) && (
-              <div style={{ position: 'absolute', top: 14, left: 14, zIndex: 2 }}>
-                <Badge text={product.badge} salePercent={product.sale_percent} />
+              <div style={{ position: 'absolute', top: 14, left: 14, zIndex: 2, display: 'flex', flexDirection: 'column', gap: 4 }}>
+                {product.sale_percent > 0 && (
+                  <Badge salePercent={product.sale_percent} />
+                )}
+                {product.badge && product.badge !== 'Oferta' && (
+                  <Badge text={product.badge} />
+                )}
               </div>
             )}
           </div>
