@@ -123,18 +123,17 @@ export function HomePage() {
               <div className="cta-mana cta-mana-1" />
               <div className="cta-mana cta-mana-2" />
               <div className="cta-mana cta-mana-3" />
-              <Link to="/catalogo" className="hero-cta" style={{
+              <Link to="/catalogo" className="hero-cta liquid-cta" style={{
                 display: 'inline-flex', alignItems: 'center', gap: 10,
-                background: 'rgba(235,25,130,0.72)',
-                backdropFilter: 'blur(20px)',
-                WebkitBackdropFilter: 'blur(20px)',
+                background: 'var(--hot)',
                 color: '#fff',
-                borderRadius: 'var(--r-pill)', padding: '16px 38px',
-                fontSize: 16, fontWeight: 600, fontFamily: 'var(--font-body)',
+                borderRadius: '50% 40% 55% 45% / 55% 50% 45% 50%',
+                padding: '18px 42px',
+                fontSize: 16, fontWeight: 700, fontFamily: 'var(--font-body)',
                 textDecoration: 'none',
-                border: '1px solid rgba(255,255,255,0.3)',
-                boxShadow: '0 0 20px rgba(235,25,130,0.4), 0 0 60px rgba(235,25,130,0.15), inset 0 1px 0 rgba(255,255,255,0.2)',
-                transition: 'all 0.3s cubic-bezier(0.34,1.56,0.64,1)',
+                border: 'none',
+                boxShadow: '0 4px 24px rgba(235,25,130,0.4), inset 0 1px 0 rgba(255,255,255,0.2)',
+                transition: 'all 0.4s cubic-bezier(0.34,1.56,0.64,1)',
                 position: 'relative',
                 overflow: 'hidden',
                 zIndex: 1,
@@ -425,21 +424,24 @@ export function HomePage() {
               }}>
                 {section.body}
               </p>
-              <Link to={section.href} style={{
+              <Link to={section.href} className="liquid-cta" style={{
                 display: 'inline-flex', alignItems: 'center', gap: 8,
-                padding: '14px 30px',
-                borderRadius: 'var(--r-pill)',
-                border: '1.5px solid var(--hot)',
-                color: 'var(--hot)',
-                fontSize: 13, fontWeight: 600,
+                padding: '16px 34px',
+                borderRadius: '50% 40% 55% 45% / 55% 50% 45% 50%',
+                border: 'none',
+                color: '#fff',
+                fontSize: 13, fontWeight: 700,
                 letterSpacing: '0.5px',
                 textTransform: 'uppercase',
                 textDecoration: 'none',
-                transition: 'all 0.25s',
-                background: 'rgba(255,255,255,0.6)',
+                transition: 'all 0.4s cubic-bezier(0.34,1.56,0.64,1)',
+                background: 'var(--hot)',
+                boxShadow: '0 4px 20px rgba(235,25,130,0.35), inset 0 1px 0 rgba(255,255,255,0.2)',
+                position: 'relative',
+                overflow: 'hidden',
               }}
-                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'var(--hot)'; (e.currentTarget as HTMLElement).style.color = '#fff'; }}
-                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.6)'; (e.currentTarget as HTMLElement).style.color = 'var(--hot)'; }}
+                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderRadius = '45% 55% 50% 40% / 50% 45% 55% 50%'; (e.currentTarget as HTMLElement).style.transform = 'scale(1.05)'; }}
+                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderRadius = '50% 40% 55% 45% / 55% 50% 45% 50%'; (e.currentTarget as HTMLElement).style.transform = 'scale(1)'; }}
               >
                 {section.cta}
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
@@ -452,6 +454,20 @@ export function HomePage() {
       ))}
 
       <style>{`
+        /* Liquid blob button breathing animation */
+        .liquid-cta {
+          animation: liquidBreathe 4s ease-in-out infinite;
+        }
+        .liquid-cta:hover {
+          animation: none;
+        }
+        @keyframes liquidBreathe {
+          0%, 100% { border-radius: 50% 40% 55% 45% / 55% 50% 45% 50%; }
+          25% { border-radius: 45% 55% 40% 50% / 50% 45% 55% 50%; }
+          50% { border-radius: 55% 45% 50% 40% / 45% 55% 50% 45%; }
+          75% { border-radius: 40% 50% 45% 55% / 50% 40% 45% 55%; }
+        }
+
         .editorial-0:hover .editorial-bg,
         .editorial-1:hover .editorial-bg {
           transform: scale(1.06);
