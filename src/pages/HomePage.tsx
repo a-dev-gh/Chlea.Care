@@ -454,18 +454,25 @@ export function HomePage() {
       ))}
 
       <style>{`
-        /* Liquid blob button breathing animation */
+        /* Liquid blob button — shape breathing + flowing gradient */
         .liquid-cta {
-          animation: liquidBreathe 4s ease-in-out infinite;
+          background: linear-gradient(135deg, #EB1982, #ffc2d1, #EB1982, #ff6bab) !important;
+          background-size: 300% 300% !important;
+          animation: liquidBreathe 4s ease-in-out infinite, liquidFlow 6s ease-in-out infinite;
         }
         .liquid-cta:hover {
-          animation: none;
+          animation: liquidFlow 3s ease-in-out infinite;
+          transform: scale(1.06);
         }
         @keyframes liquidBreathe {
           0%, 100% { border-radius: 50% 40% 55% 45% / 55% 50% 45% 50%; }
           25% { border-radius: 45% 55% 40% 50% / 50% 45% 55% 50%; }
           50% { border-radius: 55% 45% 50% 40% / 45% 55% 50% 45%; }
           75% { border-radius: 40% 50% 45% 55% / 50% 40% 45% 55%; }
+        }
+        @keyframes liquidFlow {
+          0%, 100% { background-position: 0% 50%; }
+          50% { background-position: 100% 50%; }
         }
 
         .editorial-0:hover .editorial-bg,
@@ -503,6 +510,11 @@ export function HomePage() {
           .editorial-panel > a {
             padding: 14px 28px !important;
             margin-top: 4px !important;
+            background: var(--hot) !important;
+            color: #fff !important;
+            border: none !important;
+            backdrop-filter: none !important;
+            -webkit-backdrop-filter: none !important;
           }
         }
       `}</style>
