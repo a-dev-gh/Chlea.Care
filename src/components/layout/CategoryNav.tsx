@@ -1,6 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { SEED_NAV_DROPDOWNS } from '../../data/seedData';
 import { fetchNavDropdowns } from '../../utils/db';
 import { useSiteSettings } from '../../hooks/useSiteSettings';
 
@@ -25,8 +24,8 @@ export function CategoryNav() {
   const openedByHover = useRef(false);
   const settings = useSiteSettings();
 
-  // Live nav dropdown data — seed fallback, then Supabase
-  const [dropdowns, setDropdowns] = useState<Record<string, { label: string; href: string }[]>>(SEED_NAV_DROPDOWNS);
+  // Live nav dropdown data — start empty, populated from Supabase (admin configures via AdminNavegacion)
+  const [dropdowns, setDropdowns] = useState<Record<string, { label: string; href: string }[]>>({});
 
   useEffect(() => {
     fetchNavDropdowns().then(data => {

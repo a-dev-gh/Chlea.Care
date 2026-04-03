@@ -2,16 +2,29 @@ import { useState, useEffect } from 'react';
 
 export function BackToTop() {
   const [visible, setVisible] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
 
   useEffect(() => {
     function onScroll() {
       setVisible(window.scrollY > 400);
     }
+    function onResize() {
+      setIsMobile(window.innerWidth <= 768);
+    }
+    onResize();
     window.addEventListener('scroll', onScroll, { passive: true });
-    return () => window.removeEventListener('scroll', onScroll);
+    window.addEventListener('resize', onResize, { passive: true });
+    return () => {
+      window.removeEventListener('scroll', onScroll);
+      window.removeEventListener('resize', onResize);
+    };
   }, []);
 
   if (!visible) return null;
+
+  // On mobile: position above the BottomNav (~62px) + small gap
+  // On desktop: keep original high position so it doesn't overlap anything
+  const bottomOffset = isMobile ? 76 : 150;
 
   return (
     <button
@@ -19,7 +32,7 @@ export function BackToTop() {
       aria-label="Volver arriba"
       style={{
         position: 'fixed',
-        bottom: 150,
+        bottom: bottomOffset,
         right: 20,
         width: 44,
         height: 44,

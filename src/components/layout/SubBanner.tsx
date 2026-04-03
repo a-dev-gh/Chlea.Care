@@ -6,11 +6,13 @@ export function SubBanner() {
   const [index, setIndex] = useState(0);
   const [visible, setVisible] = useState(true);
 
+  // banner_text from admin settings leads the rotation so the owner's message
+  // is always the first thing visitors see. Fallback static messages follow.
   const messages = [
+    settings.banner_text,
     '📱 +1 (809) 451-7690 · WhatsApp',
     'Envío a todo el país 🚚',
     'Siempre productos nuevos y de calidad ✨',
-    settings.banner_text,
   ];
 
   useEffect(() => {

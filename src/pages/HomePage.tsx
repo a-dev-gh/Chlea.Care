@@ -66,7 +66,7 @@ export function HomePage() {
     setTimeout(() => {
       setHeroSlide(idx);
       setHeroAnimating(false);
-    }, 400);
+    }, 300);
   }, []);
 
   useEffect(() => {
@@ -75,6 +75,13 @@ export function HomePage() {
     }, 6000);
     return () => clearInterval(timer);
   }, [heroSlide, goToSlide, HERO_SLIDES.length]);
+
+  // Preload next hero image to eliminate swap delay
+  useEffect(() => {
+    const nextIdx = (heroSlide + 1) % HERO_SLIDES.length;
+    const img = new Image();
+    img.src = HERO_SLIDES[nextIdx].image;
+  }, [heroSlide]);
 
   const slide = HERO_SLIDES[heroSlide];
   const isImageLeft = slide.layout === 'image-left';
@@ -101,7 +108,7 @@ export function HomePage() {
             direction: 'ltr',
             opacity: heroAnimating ? 0 : 1,
             transform: heroAnimating ? 'translateY(24px)' : 'translateY(0)',
-            transition: 'opacity 0.5s ease, transform 0.5s ease',
+            transition: 'opacity 0.3s ease, transform 0.3s ease',
           }}>
             <p className="section-label" style={{ marginBottom: 16 }}>{slide.label}</p>
             <h1 style={{
@@ -165,7 +172,7 @@ export function HomePage() {
             boxShadow: 'var(--shadow-md)',
             opacity: heroAnimating ? 0 : 1,
             transform: heroAnimating ? (isImageLeft ? 'translateX(-30px)' : 'translateX(30px)') : 'translateX(0)',
-            transition: 'opacity 0.5s ease, transform 0.6s ease',
+            transition: 'opacity 0.3s ease, transform 0.35s ease',
           }} className="hero-img">
             <img
               src={slide.image}
@@ -259,7 +266,7 @@ export function HomePage() {
       </section>
 
       {/* ── About — Madre e Hija ── */}
-      <section style={{ padding: '80px 24px', background: 'var(--white)' }}>
+      <section id="about" style={{ padding: '80px 24px', background: 'var(--white)' }}>
         <div style={{ maxWidth: 1000, margin: '0 auto', textAlign: 'center' }}>
           <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: 2, textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: 8 }}>
             Quiénes somos
@@ -324,16 +331,16 @@ export function HomePage() {
             </div>
           </div>
 
-          {/* Link to full story */}
+          {/* Link to full story — scrolls to about section on the same page */}
           <div style={{ marginTop: 32 }}>
-            <Link to="/sobre-nosotras" style={{
+            <a href="#about" style={{
               display: 'inline-flex', alignItems: 'center', gap: 8,
               color: 'var(--hot)', fontSize: 14, fontWeight: 600,
               textDecoration: 'none', borderBottom: '1.5px solid var(--hot)',
               paddingBottom: 2,
             }}>
               Conoce nuestra historia →
-            </Link>
+            </a>
           </div>
         </div>
         <style>{`@media (max-width: 768px) {

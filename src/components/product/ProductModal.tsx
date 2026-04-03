@@ -9,6 +9,7 @@ import { useLists } from '../../hooks/useLists';
 import { useBadges } from '../../hooks/useBadges';
 import { ListPicker } from './ListPicker';
 import { formatPrice } from '../../utils/formatPrice';
+import { sanitizeHtml } from '../../utils/sanitize';
 import { buildProductInquiry, openWhatsApp } from '../../utils/whatsapp';
 import { fetchProductReviews, submitProductReview, deleteProductReview } from '../../utils/db';
 import type { DisplayProduct, ProductReview } from '../../types/database';
@@ -417,7 +418,7 @@ export function ProductModal({ product, onClose }: ProductModalProps) {
           {/* Description (HTML rendered, backward-compatible) */}
           <div
             style={{ fontSize: 14, color: 'var(--text-soft)', lineHeight: 1.65, marginBottom: 18 }}
-            dangerouslySetInnerHTML={{ __html: descriptionToHtml(product.description) }}
+            dangerouslySetInnerHTML={{ __html: sanitizeHtml(descriptionToHtml(product.description)) }}
           />
 
           {/* Price */}

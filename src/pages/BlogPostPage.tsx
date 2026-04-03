@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, Link, Navigate } from 'react-router-dom';
 import { SEED_BLOG_POSTS } from '../data/seedBlog';
 import { fetchBlogPosts } from '../utils/db';
+import { sanitizeHtml } from '../utils/sanitize';
 import type { BlogPost } from '../types/database';
 
 // Convert legacy plain-text (with **bold** markers) to HTML if needed.
@@ -133,7 +134,7 @@ export function BlogPostPage() {
           lineHeight: 1.85,
           fontFamily: 'var(--font-body)',
         }}
-        dangerouslySetInnerHTML={{ __html: bodyToHtml(post.body) }}
+        dangerouslySetInnerHTML={{ __html: sanitizeHtml(bodyToHtml(post.body)) }}
       />
 
       {/* CTA */}

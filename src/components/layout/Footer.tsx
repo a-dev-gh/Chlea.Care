@@ -92,7 +92,7 @@ export function Footer() {
               Chlea Care
             </h4>
             {[
-              { label: 'Sobre Nosotros', href: '/sobre-nosotras', isRoute: true },
+              { label: 'Sobre Nosotros', href: '/#about', isRoute: false, external: false },
               { label: 'Contacto', href: 'https://wa.me/18094517690', external: true },
               { label: 'Políticas de Envío', href: '/politicas-envio', isRoute: true },
               { label: 'Políticas de Reembolso', href: '/politicas-reembolso', isRoute: true },

@@ -1,4 +1,5 @@
-import { Routes, Route, Navigate } from 'react-router-dom';
+import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import { useEffect } from 'react';
 import { TopNav } from './components/layout/TopNav';
 import { SubBanner } from './components/layout/SubBanner';
 import { CategoryNav } from './components/layout/CategoryNav';
@@ -33,6 +34,7 @@ import { CartPage } from './pages/CartPage';
 import { NotFoundPage } from './pages/NotFoundPage';
 import { WhatsAppFloat } from './components/WhatsAppFloat';
 import { BackToTop } from './components/ui/BackToTop';
+import { CookieBanner } from './components/ui/CookieBanner';
 
 function PublicLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -48,6 +50,7 @@ function PublicLayout({ children }: { children: React.ReactNode }) {
       <CartDrawer />
       <WhatsAppFloat />
       <BackToTop />
+      <CookieBanner />
     </div>
   );
 }
@@ -58,6 +61,10 @@ const isStudio =
   window.location.hostname.startsWith('estudio.');
 
 export default function App() {
+  // Scroll to top on every route change
+  const { pathname } = useLocation();
+  useEffect(() => { window.scrollTo(0, 0); }, [pathname]);
+
   // Studio subdomain: render only admin routes at root path
   if (isStudio) {
     return (
