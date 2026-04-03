@@ -162,6 +162,31 @@ export function Footer() {
         <div style={{ borderTop: '1px solid rgba(255,255,255,0.12)', paddingTop: 24, textAlign: 'center', fontSize: 13, opacity: 0.55 }}>
           © {new Date().getFullYear()} Chlea Care · Tu cuidado y belleza es nuestra prioridad 🩷
         </div>
+
+        {/* Developer credit */}
+        <div style={{ textAlign: 'center', paddingTop: 12, paddingBottom: 4 }}>
+          <a
+            href="https://alexander.ad"
+            target="_blank"
+            rel="noreferrer"
+            style={{
+              fontSize: 11,
+              letterSpacing: 0.5,
+              textDecoration: 'none',
+              opacity: 0.35,
+              transition: 'opacity 0.3s',
+              background: 'linear-gradient(135deg, #5ce1e6, #a855f7, #5ce1e6)',
+              backgroundSize: '200% 200%',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+              backgroundClip: 'text',
+            }}
+            onMouseEnter={e => { (e.currentTarget as HTMLElement).style.opacity = '0.8'; }}
+            onMouseLeave={e => { (e.currentTarget as HTMLElement).style.opacity = '0.35'; }}
+          >
+            made by Adrian Alexander · {new Date().getFullYear()}
+          </a>
+        </div>
       </div>
     </footer>
   );
