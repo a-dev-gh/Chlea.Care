@@ -325,7 +325,7 @@ export function TopNav() {
 
           {/* Heart / Mis Listas — desktop only, moves to BottomNav on mobile */}
           <Link
-            to="/catalogo?filtro=favoritos"
+            to="/mis-listas"
             className="nav-icon-btn nav-desktop-only"
             title="Mis Listas"
             style={{
@@ -660,7 +660,7 @@ export function TopNav() {
               <div style={{ borderTop: '1px solid var(--border)', margin: '8px 0 0', paddingTop: 8 }}>
                 {/* Mis Listas */}
                 <Link
-                  to="/catalogo?filtro=favoritos"
+                  to="/mis-listas"
                   onClick={() => setMenuOpen(false)}
                   className="menu-link"
                   style={{
