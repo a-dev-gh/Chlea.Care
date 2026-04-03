@@ -92,8 +92,8 @@ export function Footer() {
               Chlea Care
             </h4>
             {[
-              { label: 'Sobre Nosotros', href: '#' },
-              { label: 'Contacto', href: '#' },
+              { label: 'Sobre Nosotros', href: '/sobre-nosotras', isRoute: true },
+              { label: 'Contacto', href: 'https://wa.me/18094517690', external: true },
               { label: 'Políticas de Envío', href: '/politicas-envio', isRoute: true },
               { label: 'Políticas de Reembolso', href: '/politicas-reembolso', isRoute: true },
               { label: 'WhatsApp', href: 'https://wa.me/18094517690', external: true },
@@ -160,7 +160,7 @@ export function Footer() {
         </div>
 
         <div style={{ borderTop: '1px solid rgba(255,255,255,0.12)', paddingTop: 24, textAlign: 'center', fontSize: 13, opacity: 0.55 }}>
-          © 2025 Chlea Care · Tu cuidado y belleza es nuestra prioridad 🩷
+          © {new Date().getFullYear()} Chlea Care · Tu cuidado y belleza es nuestra prioridad 🩷
         </div>
       </div>
     </footer>

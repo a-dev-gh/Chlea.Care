@@ -1,10 +1,25 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { SEED_BLOG_POSTS, BLOG_CATEGORIES } from '../data/seedBlog';
+import { fetchBlogPosts } from '../utils/db';
+import type { BlogPost } from '../types/database';
 
 export function BlogPage() {
   const [activeCategory, setActiveCategory] = useState('');
-  const posts = SEED_BLOG_POSTS
+  const [dbPosts, setDbPosts] = useState<BlogPost[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchBlogPosts().then(data => {
+      setDbPosts(data);
+      setLoading(false);
+    });
+  }, []);
+
+  // Use Supabase data if available, fall back to seed for development
+  const source = dbPosts.length > 0 ? dbPosts : SEED_BLOG_POSTS;
+
+  const posts = source
     .filter(p => p.is_visible)
     .filter(p => !activeCategory || p.category === activeCategory)
     .sort((a, b) => new Date(b.published_at).getTime() - new Date(a.published_at).getTime());
@@ -64,7 +79,11 @@ export function BlogPage() {
       </div>
 
       {/* Blog grid */}
-      {posts.length > 0 ? (
+      {loading ? (
+        <div style={{ textAlign: 'center', padding: '60px 0' }}>
+          <p style={{ color: 'var(--text-muted)', fontSize: 15 }}>Cargando posts...</p>
+        </div>
+      ) : posts.length > 0 ? (
         <div style={{
           display: 'grid',
           gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))',

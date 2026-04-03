@@ -123,7 +123,7 @@ export function AdminDashboard() {
         </h1>
         {user?.email && (
           <p style={{ fontSize: 14, color: 'var(--text-muted)', margin: 0 }}>
-            Bienvenida, {user.email}
+            Hola, {user.email}
           </p>
         )}
       </div>

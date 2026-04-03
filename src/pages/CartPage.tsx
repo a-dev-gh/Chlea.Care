@@ -158,7 +158,7 @@ export function CartPage() {
     <div style={styles.page}>
       <h1 style={styles.pageTitle}>Checkout</h1>
 
-      <div style={styles.grid}>
+      <div style={styles.grid} className="cart-page-grid">
         {/* ── LEFT: Order Summary ───────────────────────────────────────── */}
         <div style={styles.leftCol}>
           <div style={styles.card}>

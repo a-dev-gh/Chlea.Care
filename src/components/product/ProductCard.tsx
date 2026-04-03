@@ -66,7 +66,13 @@ export function ProductCard({ product, isMen = false, onOpenModal }: ProductCard
       openWhatsApp(buildProductInquiry(product.name));
       return;
     }
-    addItem({ id: product.id, name: product.name, price: salePrice ?? product.price });
+    addItem({
+      id: product.id,
+      name: product.name,
+      price: salePrice ?? product.price,
+      image_url: product.image_urls?.[0] || product.image_url,
+      badge: product.badge,
+    });
     setAdding(true);
     setTimeout(() => setAdding(false), 1200);
     openCart();

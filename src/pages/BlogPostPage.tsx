@@ -1,5 +1,8 @@
+import { useState, useEffect } from 'react';
 import { useParams, Link, Navigate } from 'react-router-dom';
 import { SEED_BLOG_POSTS } from '../data/seedBlog';
+import { fetchBlogPosts } from '../utils/db';
+import type { BlogPost } from '../types/database';
 
 // Convert legacy plain-text (with **bold** markers) to HTML if needed.
 // If the string already contains HTML tags, use it as-is.
@@ -21,7 +24,27 @@ function bodyToHtml(text: string): string {
 
 export function BlogPostPage() {
   const { slug } = useParams<{ slug: string }>();
-  const post = SEED_BLOG_POSTS.find(p => p.slug === slug && p.is_visible);
+  const [dbPosts, setDbPosts] = useState<BlogPost[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchBlogPosts().then(data => {
+      setDbPosts(data);
+      setLoading(false);
+    });
+  }, []);
+
+  if (loading) {
+    return (
+      <div style={{ maxWidth: 720, margin: '0 auto', padding: '80px 24px', textAlign: 'center' }}>
+        <p style={{ color: 'var(--text-muted)', fontSize: 15 }}>Cargando...</p>
+      </div>
+    );
+  }
+
+  // Use Supabase data if available, fall back to seed for development
+  const source = dbPosts.length > 0 ? dbPosts : SEED_BLOG_POSTS;
+  const post = source.find(p => p.slug === slug && p.is_visible);
 
   if (!post) return <Navigate to="/blog" replace />;
 

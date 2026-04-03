@@ -29,7 +29,7 @@ import type {
 // ---------------------------------------------------------------------------
 
 const SETTINGS_DEFAULTS: SiteSettings = {
-  banner_text: 'Envíos disponibles · WhatsApp: +1 (809) 775-6773',
+  banner_text: 'Envíos disponibles · WhatsApp: +1 (809) 451-7690',
   whatsapp_number: '18094517690',
   hero_tagline: 'Glow Different, Glow Chlea',
   hero_sub: 'Productos premium de cabello, piel y estilo curados para las que exigen más.',

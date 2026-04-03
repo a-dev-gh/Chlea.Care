@@ -2,17 +2,19 @@ import { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { useSiteSettings } from '../hooks/useSiteSettings';
 import { useProducts } from '../hooks/useProducts';
+import { fetchInstagramPosts } from '../utils/db';
 import { ProductGrid } from '../components/product/ProductGrid';
 import { BrandsCarousel } from '../components/BrandsCarousel';
 import { TestimonialsCarousel } from '../components/TestimonialsCarousel';
 import { OrderProcess } from '../components/OrderProcess';
 import { InstagramModal, getEmbedUrl } from '../components/InstagramModal';
+import type { InstagramPost } from '../types/database';
 
-// Managed from admin — Denise can add/remove/reorder these
-const INSTAGRAM_POSTS = [
-  { url: 'https://www.instagram.com/p/DWEnZb4jn5w/', type: 'post' as const, placeholder: 'linear-gradient(135deg,#ffd6e7 0%,#e8b4c8 100%)' },
-  { url: 'https://www.instagram.com/p/DPo41_dDkWh/', type: 'reel' as const, placeholder: 'linear-gradient(135deg,#f0d4df 0%,#d4a0b5 100%)' },
-  { url: 'https://www.instagram.com/p/DGmNg0PPvCM/', type: 'post' as const, placeholder: 'linear-gradient(135deg,#fce4ef 0%,#e8c5d4 100%)' },
+// Fallback posts — used when Supabase is not configured or returns empty
+const FALLBACK_INSTAGRAM_POSTS: InstagramPost[] = [
+  { id: '1', url: 'https://www.instagram.com/p/DWEnZb4jn5w/', type: 'post', sort_order: 0, is_visible: true, created_at: '' },
+  { id: '2', url: 'https://www.instagram.com/p/DPo41_dDkWh/', type: 'reel', sort_order: 1, is_visible: true, created_at: '' },
+  { id: '3', url: 'https://www.instagram.com/p/DGmNg0PPvCM/', type: 'post', sort_order: 2, is_visible: true, created_at: '' },
 ];
 
 export function HomePage() {
@@ -22,6 +24,14 @@ export function HomePage() {
   const menProducts = allProducts.filter(p => p.category === 'hombres');
   const [menOpen, setMenOpen] = useState(false);
   const [igModal, setIgModal] = useState<{ url: string; type: 'post' | 'reel' } | null>(null);
+  const [instagramPosts, setInstagramPosts] = useState<InstagramPost[]>(FALLBACK_INSTAGRAM_POSTS);
+
+  // Fetch Instagram posts from Supabase; keep fallback if empty
+  useEffect(() => {
+    fetchInstagramPosts().then(data => {
+      if (data.length > 0) setInstagramPosts(data);
+    });
+  }, []);
 
   // ── Rotating Hero Slides ──
   const HERO_SLIDES = [
@@ -601,10 +611,10 @@ export function HomePage() {
         {/* Full-width grid — edge to edge, equal height, only posts with URLs */}
         <div style={{
           display: 'grid',
-          gridTemplateColumns: `repeat(${INSTAGRAM_POSTS.filter(p => p.url).length}, 1fr)`,
+          gridTemplateColumns: `repeat(${instagramPosts.filter(p => p.url).length}, 1fr)`,
           gap: 3,
         }} className="ig-full-grid">
-          {INSTAGRAM_POSTS.filter(p => p.url).map((post, i) => (
+          {instagramPosts.filter(p => p.url).map((post, i) => (
             <button
               key={i}
               onClick={() => setIgModal({ url: post.url, type: post.type })}
@@ -616,7 +626,7 @@ export function HomePage() {
                 border: 'none',
                 padding: 0,
                 cursor: 'pointer',
-                background: post.placeholder,
+                background: (post as InstagramPost & { placeholder?: string }).placeholder || 'linear-gradient(135deg,#ffd6e7 0%,#e8b4c8 100%)',
               }}
             >
               {/* Instagram embed iframe — offset to hide IG chrome, show content */}

@@ -225,7 +225,13 @@ export function ProductModal({ product, onClose }: ProductModalProps) {
     : null;
 
   function handleAdd() {
-    addItem({ id: product!.id, name: product!.name, price: salePrice ?? product!.price });
+    addItem({
+      id: product!.id,
+      name: product!.name,
+      price: salePrice ?? product!.price,
+      image_url: product!.image_urls?.[0] || product!.image_url,
+      badge: product!.badge,
+    });
     openCart();
     onClose();
   }

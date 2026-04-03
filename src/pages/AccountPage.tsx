@@ -928,7 +928,7 @@ export function AccountPage() {
 
                 {/* WhatsApp contact link */}
                 <a
-                  href="https://wa.me/18097756773"
+                  href="https://wa.me/18094517690"
                   target="_blank"
                   rel="noopener noreferrer"
                   style={{

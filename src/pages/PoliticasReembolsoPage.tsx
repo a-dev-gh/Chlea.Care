@@ -38,7 +38,7 @@ function parseFormattedText(text: string): React.ReactNode[] {
   });
 }
 
-const DEFAULT_CONTENT = `**Información de Reembolsos**\nActualmente estamos preparando nuestra política de reembolsos. Por favor contáctanos vía WhatsApp para más información sobre devoluciones y reembolsos.\n\n**Contacto**\nEscríbenos al WhatsApp: +1 (809) 775-6773`;
+const DEFAULT_CONTENT = `**Información de Reembolsos**\nActualmente estamos preparando nuestra política de reembolsos. Por favor contáctanos vía WhatsApp para más información sobre devoluciones y reembolsos.\n\n**Contacto**\nEscríbenos al WhatsApp: +1 (809) 451-7690`;
 
 export function PoliticasReembolsoPage() {
   const settings = useSiteSettings();

@@ -38,7 +38,7 @@ function parseFormattedText(text: string): React.ReactNode[] {
   });
 }
 
-const DEFAULT_CONTENT = `**Información de Envíos**\nActualmente estamos preparando nuestra política de envíos. Por favor contáctanos vía WhatsApp para más información sobre tiempos y costos de entrega.\n\n**Contacto**\nEscríbenos al WhatsApp: +1 (809) 775-6773`;
+const DEFAULT_CONTENT = `**Información de Envíos**\nActualmente estamos preparando nuestra política de envíos. Por favor contáctanos vía WhatsApp para más información sobre tiempos y costos de entrega.\n\n**Contacto**\nEscríbenos al WhatsApp: +1 (809) 451-7690`;
 
 export function PoliticasEnvioPage() {
   const settings = useSiteSettings();

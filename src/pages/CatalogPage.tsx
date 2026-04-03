@@ -127,7 +127,7 @@ export function CatalogPage() {
     return Object.entries(groups)
       .map(([name, valuesSet]) => ({ name, values: [...valuesSet].sort() }))
       .sort((a, b) => a.name.localeCompare(b.name));
-  }, [category]);
+  }, [category, allProducts]);
 
   // Check if any filter is active
   const hasActiveFilters = selectedBrands.length > 0 || activePills.length > 0 ||
