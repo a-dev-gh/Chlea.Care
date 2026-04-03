@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { formatPrice } from '../../utils/formatPrice';
 import { adminFetch, adminUpdate } from '../../utils/adminApi';
 import { supabase } from '../../utils/supabase';
+import { showToast } from '../../components/ui/Toast';
 import type { WhatsAppOrder, OrderStatus } from '../../types/database';
 
 // Status configuration
@@ -34,10 +35,11 @@ export function AdminOrdenes() {
   async function updateStatus(orderId: string, newStatus: OrderStatus) {
     if (supabase) {
       const { error } = await adminUpdate<WhatsAppOrder>('whatsapp_orders', orderId, { status: newStatus } as any);
-      if (error) alert('Error al actualizar: ' + error);
+      if (error) { showToast('Error al actualizar: ' + error, 'error'); } else { showToast(`Orden marcada como ${STATUS_CONFIG[newStatus].label}`, 'success'); }
       await loadOrders();
     } else {
       setOrders(prev => prev.map(o => o.id === orderId ? { ...o, status: newStatus } : o));
+      showToast(`Orden marcada como ${STATUS_CONFIG[newStatus].label}`, 'success');
     }
   }
 
@@ -52,19 +54,19 @@ export function AdminOrdenes() {
   }
 
   if (loading) {
-    return <div style={{ padding: 32, textAlign: 'center', color: 'var(--text-muted)' }}>Cargando ordenes...</div>;
+    return <div style={{ padding: 32, textAlign: 'center', color: 'var(--text-muted)' }}>Cargando órdenes...</div>;
   }
 
   if (orders.length === 0) {
     return (
       <div style={{ padding: 32 }}>
-        <h1 style={{ fontFamily: 'var(--font-display)', fontSize: 28, fontWeight: 400, color: 'var(--text)', marginBottom: 8 }}>Ordenes</h1>
-        <p style={{ color: 'var(--text-muted)', fontSize: 14 }}>Las ordenes apareceran aqui una vez conectada la base de datos.</p>
+        <h1 style={{ fontFamily: 'var(--font-display)', fontSize: 28, fontWeight: 400, color: 'var(--text)', marginBottom: 8 }}>Órdenes</h1>
+        <p style={{ color: 'var(--text-muted)', fontSize: 14 }}>Las órdenes aparecerán aquí una vez conectada la base de datos.</p>
         <div style={{
           marginTop: 40, background: 'var(--white)', border: '1px solid var(--border)',
           borderRadius: 'var(--r-md)', padding: '60px 24px', textAlign: 'center',
         }}>
-          <p style={{ color: 'var(--text-muted)', fontSize: 15 }}>Sin ordenes aun</p>
+          <p style={{ color: 'var(--text-muted)', fontSize: 15 }}>Sin órdenes aún</p>
         </div>
       </div>
     );
@@ -73,8 +75,8 @@ export function AdminOrdenes() {
   return (
     <div style={{ padding: 32 }}>
       <div style={{ marginBottom: 28 }}>
-        <h1 style={{ fontFamily: 'var(--font-display)', fontSize: 28, fontWeight: 400, color: 'var(--text)' }}>Ordenes</h1>
-        <p style={{ fontSize: 14, color: 'var(--text-muted)', marginTop: 4 }}>{orders.length} ordenes</p>
+        <h1 style={{ fontFamily: 'var(--font-display)', fontSize: 28, fontWeight: 400, color: 'var(--text)' }}>Órdenes</h1>
+        <p style={{ fontSize: 14, color: 'var(--text-muted)', marginTop: 4 }}>{orders.length} órdenes</p>
       </div>
 
       {/* Orders list */}
@@ -139,13 +141,10 @@ export function AdminOrdenes() {
                 </span>
 
                 {/* Expand arrow */}
-                <span style={{
-                  color: 'var(--text-muted)', fontSize: 12, flexShrink: 0,
-                  transform: expanded ? 'rotate(180deg)' : 'rotate(0deg)',
-                  transition: 'transform 0.2s',
-                }}>
-                  v
-                </span>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"
+                  style={{ transition: 'transform 0.2s', transform: expanded ? 'rotate(180deg)' : 'rotate(0)', color: 'var(--text-muted)', flexShrink: 0 }}>
+                  <polyline points="6 9 12 15 18 9"/>
+                </svg>
               </div>
 
               {/* Expanded detail */}

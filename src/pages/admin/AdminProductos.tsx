@@ -1,37 +1,13 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
+import { showToast } from '../../components/ui/Toast';
 import { formatPrice } from '../../utils/formatPrice';
 import { Badge } from '../../components/ui/Badge';
 import { Button } from '../../components/ui/Button';
 import { Modal } from '../../components/ui/Modal';
 import { adminFetch, adminInsert, adminUpdate, adminDelete } from '../../utils/adminApi';
-import { SEED_PRODUCTS } from '../../data/seedData';
 import { SEED_BRANDS } from '../../data/seedData';
 import { supabase } from '../../utils/supabase';
 import type { Product, Brand, LabelGroup } from '../../types/database';
-
-// Seed fallback mapper (same as db.ts)
-function seedToProducts(): Product[] {
-  return SEED_PRODUCTS.map((p) => ({
-    id: p.id,
-    name: p.name,
-    price: p.price,
-    category: p.category as Product['category'],
-    badge: p.badge,
-    is_hot: p.is_hot,
-    sale_percent: p.sale_percent,
-    description: p.description,
-    brand_slug: p.brand
-      ? p.brand.toLowerCase().replace(/[&\s]+/g, '-').replace(/--+/g, '-')
-      : null,
-    image_url: p.image_url ?? '',
-    image_urls: p.image_urls ?? [],
-    is_visible: p.is_visible,
-    is_in_stock: true,
-    is_by_request: false,
-    labels: p.labels ?? {},
-    created_at: new Date().toISOString(),
-  }));
-}
 
 function seedToBrands(): Brand[] {
   return SEED_BRANDS.map((b, i) => ({
@@ -116,6 +92,8 @@ function ImageThumb({ url, size = 64 }: { url: string; size?: number }) {
   );
 }
 
+const ITEMS_PER_PAGE = 20;
+
 export function AdminProductos() {
   const [products, setProducts] = useState<Product[]>([]);
   const [brands, setBrands] = useState<Brand[]>([]);
@@ -125,6 +103,12 @@ export function AdminProductos() {
   const [isNew, setIsNew] = useState(false);
   const [saving, setSaving] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
+  const [errors, setErrors] = useState<Record<string, string>>({});
+
+  // Search / filter / pagination state
+  const [search, setSearch] = useState('');
+  const [filterCat, setFilterCat] = useState('');
+  const [page, setPage] = useState(1);
 
   // Fetch products, brands, and label groups
   const loadData = useCallback(async () => {
@@ -134,8 +118,7 @@ export function AdminProductos() {
       adminFetch<Brand>('brands', { orderBy: 'name' }),
       adminFetch<LabelGroup>('label_groups', { orderBy: 'sort_order' }),
     ]);
-    // If Supabase not configured, use seed data
-    setProducts(prods.length > 0 ? prods : seedToProducts());
+    setProducts(prods);
     setBrands(brnds.length > 0 ? brnds : seedToBrands());
     setLabelGroups(groups);
     setLoading(false);
@@ -143,40 +126,70 @@ export function AdminProductos() {
 
   useEffect(() => { loadData(); }, [loadData]);
 
+  // Filtered list derived from search + category
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    return products.filter(p => {
+      const matchSearch = !q || p.name.toLowerCase().includes(q) || (p.brand_slug ?? '').toLowerCase().includes(q);
+      const matchCat = !filterCat || p.category === filterCat;
+      return matchSearch && matchCat;
+    });
+  }, [products, search, filterCat]);
+
+  // Current page slice
+  const totalPages = Math.max(1, Math.ceil(filtered.length / ITEMS_PER_PAGE));
+  const paginated = filtered.slice((page - 1) * ITEMS_PER_PAGE, page * ITEMS_PER_PAGE);
+
+  // Reset to page 1 whenever search or filter changes
+  useEffect(() => { setPage(1); }, [search, filterCat]);
+
   // Open create modal
   function openNew() {
     setEditing({ ...EMPTY_PRODUCT, image_urls: [] });
     setIsNew(true);
+    setErrors({});
   }
 
   // Open edit modal
   function openEdit(product: Product) {
     setEditing({ ...product, image_urls: product.image_urls ?? [] });
     setIsNew(false);
+    setErrors({});
   }
 
   // Save (create or update) — image_urls is now included in the payload
   async function handleSave() {
-    if (!editing || !editing.name?.trim()) return;
+    if (!editing) return;
+
+    // Validate required fields
+    const newErrors: Record<string, string> = {};
+    if (!editing.name?.trim()) newErrors.name = 'El nombre es obligatorio';
+    if (!editing.price || editing.price < 1) newErrors.price = 'El precio debe ser mayor a 0';
+    if ((editing.sale_percent ?? 0) < 0 || (editing.sale_percent ?? 0) > 100) newErrors.sale_percent = 'El descuento debe ser entre 0 y 100';
+    if (Object.keys(newErrors).length > 0) { setErrors(newErrors); return; }
+    setErrors({});
+
     setSaving(true);
 
     if (supabase) {
       if (isNew) {
         const { id, created_at, ...dbData } = editing as any;
         const { error } = await adminInsert<Product>('products', dbData);
-        if (error) { alert('Error al guardar: ' + error); } else { await loadData(); }
+        if (error) { showToast('Error al guardar: ' + error, 'error'); } else { await loadData(); showToast('Producto creado', 'success'); }
       } else {
         const { id, created_at, ...dbData } = editing as any;
         const { error } = await adminUpdate<Product>('products', editing.id as string, dbData);
-        if (error) { alert('Error al guardar: ' + error); } else { await loadData(); }
+        if (error) { showToast('Error al guardar: ' + error, 'error'); } else { await loadData(); showToast('Producto actualizado', 'success'); }
       }
     } else {
       // Local-only fallback: update state directly
       if (isNew) {
         const newProd = { ...editing, id: String(Date.now()), created_at: new Date().toISOString() } as Product;
         setProducts(prev => [newProd, ...prev]);
+        showToast('Producto creado', 'success');
       } else {
         setProducts(prev => prev.map(p => p.id === editing.id ? { ...p, ...editing } as Product : p));
+        showToast('Producto actualizado', 'success');
       }
     }
 
@@ -188,10 +201,11 @@ export function AdminProductos() {
   async function handleDelete(id: string) {
     if (supabase) {
       const { ok, error } = await adminDelete('products', id);
-      if (error) alert('Error al eliminar: ' + error);
-      if (ok) await loadData();
+      if (error) { showToast('Error al eliminar: ' + error, 'error'); }
+      if (ok) { await loadData(); showToast('Producto eliminado', 'success'); }
     } else {
       setProducts(prev => prev.filter(p => p.id !== id));
+      showToast('Producto eliminado', 'success');
     }
     setConfirmDelete(null);
   }
@@ -201,10 +215,11 @@ export function AdminProductos() {
     const updated = { ...product, is_visible: !product.is_visible };
     if (supabase) {
       const { error } = await adminUpdate<Product>('products', product.id, { is_visible: updated.is_visible } as any);
-      if (error) alert('Error: ' + error);
+      if (error) { showToast('Error: ' + error, 'error'); } else { showToast(updated.is_visible ? 'Producto visible' : 'Producto oculto', 'info'); }
       await loadData();
     } else {
       setProducts(prev => prev.map(p => p.id === product.id ? updated : p));
+      showToast(updated.is_visible ? 'Producto visible' : 'Producto oculto', 'info');
     }
   }
 
@@ -290,6 +305,37 @@ export function AdminProductos() {
         </button>
       </div>
 
+      {/* Search + filter controls */}
+      <div style={{ display: 'flex', gap: 12, marginBottom: 16, flexWrap: 'wrap', alignItems: 'center' }}>
+        <input
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+          placeholder="Buscar por nombre o marca..."
+          style={{
+            flex: 1, minWidth: 200, padding: '9px 14px',
+            border: '1.5px solid var(--border2)', borderRadius: 'var(--r-sm)',
+            fontSize: 14, fontFamily: 'var(--font-body)', color: 'var(--text)',
+            outline: 'none', background: 'var(--white)',
+          }}
+        />
+        <select
+          value={filterCat}
+          onChange={e => setFilterCat(e.target.value)}
+          style={{
+            padding: '9px 14px', border: '1.5px solid var(--border2)',
+            borderRadius: 'var(--r-sm)', fontSize: 14,
+            fontFamily: 'var(--font-body)', color: 'var(--text)',
+            outline: 'none', background: 'var(--white)', cursor: 'pointer',
+          }}
+        >
+          <option value="">Todas las categorias</option>
+          {CATEGORIES.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
+        </select>
+        <span style={{ fontSize: 13, color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>
+          {filtered.length} resultado{filtered.length !== 1 ? 's' : ''}
+        </span>
+      </div>
+
       {/* Products table */}
       <div style={{ background: 'var(--white)', borderRadius: 'var(--r-md)', border: '1px solid var(--border)', overflow: 'hidden' }}>
         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
@@ -303,9 +349,9 @@ export function AdminProductos() {
             </tr>
           </thead>
           <tbody>
-            {products.map((p, i) => (
+            {paginated.map((p, i) => (
               <tr key={p.id} style={{
-                borderBottom: i < products.length - 1 ? '1px solid var(--border)' : 'none',
+                borderBottom: i < paginated.length - 1 ? '1px solid var(--border)' : 'none',
                 transition: 'background 0.15s',
               }}
                 onMouseEnter={e => ((e.currentTarget as HTMLElement).style.background = 'rgba(235,25,130,0.03)')}
@@ -384,6 +430,41 @@ export function AdminProductos() {
         </table>
       </div>
 
+      {/* Pagination controls */}
+      {totalPages > 1 && (
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 16, marginTop: 20 }}>
+          <button
+            onClick={() => setPage(p => Math.max(1, p - 1))}
+            disabled={page === 1}
+            style={{
+              padding: '7px 16px', borderRadius: 'var(--r-sm)',
+              border: '1.5px solid var(--border2)', background: 'var(--white)',
+              fontSize: 13, fontWeight: 600, fontFamily: 'var(--font-body)',
+              color: page === 1 ? 'var(--text-muted)' : 'var(--text)',
+              cursor: page === 1 ? 'not-allowed' : 'pointer',
+            }}
+          >
+            Anterior
+          </button>
+          <span style={{ fontSize: 13, color: 'var(--text-muted)' }}>
+            Página {page} de {totalPages}
+          </span>
+          <button
+            onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+            disabled={page === totalPages}
+            style={{
+              padding: '7px 16px', borderRadius: 'var(--r-sm)',
+              border: '1.5px solid var(--border2)', background: 'var(--white)',
+              fontSize: 13, fontWeight: 600, fontFamily: 'var(--font-body)',
+              color: page === totalPages ? 'var(--text-muted)' : 'var(--text)',
+              cursor: page === totalPages ? 'not-allowed' : 'pointer',
+            }}
+          >
+            Siguiente
+          </button>
+        </div>
+      )}
+
       {/* Delete Confirmation Modal */}
       <Modal open={!!confirmDelete} onClose={() => setConfirmDelete(null)} maxWidth={400}>
         <div style={{ padding: 28, textAlign: 'center' }}>
@@ -391,7 +472,7 @@ export function AdminProductos() {
             Eliminar producto
           </h3>
           <p style={{ fontSize: 14, color: 'var(--text-muted)', marginBottom: 24, lineHeight: 1.5 }}>
-            Esta accion no se puede deshacer. El producto sera eliminado permanentemente.
+            Esta acción no se puede deshacer. El producto será eliminado permanentemente.
           </p>
           <div style={{ display: 'flex', gap: 12 }}>
             <Button onClick={() => confirmDelete && handleDelete(confirmDelete)} style={{ background: '#ef4444' }} fullWidth>
@@ -429,8 +510,9 @@ export function AdminProductos() {
                     value={editing.name || ''}
                     onChange={e => setEditing({ ...editing, name: e.target.value })}
                     placeholder="Ej: OI All In One Milk"
-                    style={inputStyle}
+                    style={{ ...inputStyle, borderColor: errors.name ? '#d32f2f' : undefined }}
                   />
+                  {errors.name && <p style={{ color: '#d32f2f', fontSize: 12, marginTop: 4 }}>{errors.name}</p>}
                 </div>
 
                 {/* Price + Sale */}
@@ -438,11 +520,12 @@ export function AdminProductos() {
                   <div style={{ flex: 1 }}>
                     <label style={labelStyle}>Precio (RD$)</label>
                     <input
-                      type="number" min={0}
+                      type="number" min={1}
                       value={editing.price || 0}
                       onChange={e => setEditing({ ...editing, price: Number(e.target.value) })}
-                      style={inputStyle}
+                      style={{ ...inputStyle, borderColor: errors.price ? '#d32f2f' : undefined }}
                     />
+                    {errors.price && <p style={{ color: '#d32f2f', fontSize: 12, marginTop: 4 }}>{errors.price}</p>}
                   </div>
                   <div style={{ flex: 1 }}>
                     <label style={labelStyle}>Descuento (%)</label>
@@ -450,15 +533,16 @@ export function AdminProductos() {
                       type="number" min={0} max={100}
                       value={editing.sale_percent || 0}
                       onChange={e => setEditing({ ...editing, sale_percent: Number(e.target.value) })}
-                      style={inputStyle}
+                      style={{ ...inputStyle, borderColor: errors.sale_percent ? '#d32f2f' : undefined }}
                     />
+                    {errors.sale_percent && <p style={{ color: '#d32f2f', fontSize: 12, marginTop: 4 }}>{errors.sale_percent}</p>}
                   </div>
                 </div>
 
                 {/* Category + Brand */}
                 <div style={{ display: 'flex', gap: 12 }}>
                   <div style={{ flex: 1 }}>
-                    <label style={labelStyle}>Categoria</label>
+                    <label style={labelStyle}>Categoría</label>
                     <select
                       value={editing.category || 'cabello'}
                       onChange={e => setEditing({ ...editing, category: e.target.value as Product['category'] })}
@@ -500,12 +584,12 @@ export function AdminProductos() {
 
                 {/* Description */}
                 <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
-                  <label style={labelStyle}>Descripcion</label>
+                  <label style={labelStyle}>Descripción</label>
                   <textarea
                     value={editing.description || ''}
                     onChange={e => setEditing({ ...editing, description: e.target.value })}
                     rows={6}
-                    placeholder="Descripcion del producto..."
+                    placeholder="Descripción del producto..."
                     style={{ ...inputStyle, resize: 'vertical', flex: 1 }}
                   />
                 </div>

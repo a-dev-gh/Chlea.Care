@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { Modal } from '../../components/ui/Modal';
 import { Button } from '../../components/ui/Button';
 import { adminFetch, adminInsert, adminUpdate, adminDelete } from '../../utils/adminApi';
+import { showToast } from '../../components/ui/Toast';
 import type { LabelGroup } from '../../types/database';
 
 // Shared input style matching the rest of the admin pages
@@ -84,7 +85,7 @@ function DeleteConfirm({ onConfirm, onCancel }: { onConfirm: () => void; onCance
           fontFamily: 'var(--font-body)',
         }}
       >
-        Si
+        Sí
       </button>
       <button
         onClick={onCancel}
@@ -237,7 +238,7 @@ function LabelGroupCard({
             </div>
           ) : (
             <p style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 16 }}>
-              Sin valores todavia. Agrega el primero abajo.
+              Sin valores todavía. Agrega el primero abajo.
             </p>
           )}
 
@@ -319,26 +320,28 @@ export function AdminEtiquetas() {
     } as Omit<LabelGroup, 'id' | 'created_at'>);
 
     if (error) {
-      alert('Error al crear: ' + error);
+      showToast('Error al crear: ' + error, 'error');
     } else {
       await loadGroups();
       setShowModal(false);
+      showToast('Etiqueta creada', 'success');
     }
     setCreating(false);
   }
 
   async function handleDelete(id: string) {
     const { ok, error } = await adminDelete('label_groups', id);
-    if (error) alert('Error al eliminar: ' + error);
-    if (ok) setGroups(prev => prev.filter(g => g.id !== id));
+    if (error) { showToast('Error al eliminar: ' + error, 'error'); }
+    if (ok) { setGroups(prev => prev.filter(g => g.id !== id)); showToast('Etiqueta eliminada', 'success'); }
   }
 
   async function handleUpdateValues(id: string, values: string[]) {
     const { error } = await adminUpdate<LabelGroup>('label_groups', id, { values });
     if (error) {
-      alert('Error al guardar: ' + error);
+      showToast('Error al guardar: ' + error, 'error');
     } else {
       setGroups(prev => prev.map(g => g.id === id ? { ...g, values } : g));
+      showToast('Valores actualizados', 'success');
     }
   }
 
@@ -398,8 +401,8 @@ export function AdminEtiquetas() {
           textAlign: 'center',
           color: 'var(--text-muted)',
         }}>
-          <p style={{ fontSize: 15, marginBottom: 8 }}>No hay grupos de etiquetas todavia.</p>
-          <p style={{ fontSize: 13 }}>Crea el primero con el boton de arriba.</p>
+          <p style={{ fontSize: 15, marginBottom: 8 }}>No hay grupos de etiquetas todavía.</p>
+          <p style={{ fontSize: 13 }}>Crea el primero con el botón de arriba.</p>
         </div>
       )}
 
@@ -451,7 +454,7 @@ export function AdminEtiquetas() {
                 style={inputStyle}
               />
               <p style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 6 }}>
-                Opcional — puedes agregar mas valores despues.
+                Opcional — puedes agregar más valores después.
               </p>
             </div>
 

@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { adminFetch, adminUpdate, adminDelete } from '../../utils/adminApi';
+import { showToast } from '../../components/ui/Toast';
 import type { Testimonial } from '../../types/database';
 
 // Render filled/empty stars up to 5
@@ -72,20 +73,21 @@ export function AdminTestimonios() {
 
   // Toggle is_approved on/off
   async function toggleApprove(t: Testimonial) {
+    const newVal = !t.is_approved;
     const { error } = await adminUpdate<Testimonial>(
       'testimonials',
       t.id,
-      { is_approved: !t.is_approved } as any,
+      { is_approved: newVal } as any,
     );
-    if (error) alert('Error: ' + error);
+    if (error) { showToast('Error: ' + error, 'error'); } else { showToast(newVal ? 'Testimonio aprobado' : 'Testimonio pendiente', 'info'); }
     await loadData();
   }
 
   // Delete a testimonial after inline confirmation
   async function handleDelete(id: string) {
     const { ok, error } = await adminDelete('testimonials', id);
-    if (error) alert('Error: ' + error);
-    if (ok) await loadData();
+    if (error) { showToast('Error: ' + error, 'error'); }
+    if (ok) { await loadData(); showToast('Testimonio eliminado', 'success'); }
     setConfirmDelete(null);
   }
 

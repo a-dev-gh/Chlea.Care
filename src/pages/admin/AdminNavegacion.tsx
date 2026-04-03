@@ -184,13 +184,13 @@ export function AdminNavegacion() {
       }
 
       if (success) {
-        setFeedback('Navegacion guardada');
+        setFeedback('Navegación guardada');
         await loadDropdowns();
       } else {
         setFeedback('Error al guardar algunos cambios');
       }
     } else {
-      setFeedback('Navegacion guardada (modo local)');
+      setFeedback('Navegación guardada (modo local)');
     }
 
     setSaving(false);
@@ -198,7 +198,7 @@ export function AdminNavegacion() {
   }
 
   if (loading) {
-    return <div style={{ padding: 32, textAlign: 'center', color: 'var(--text-muted)' }}>Cargando navegacion...</div>;
+    return <div style={{ padding: 32, textAlign: 'center', color: 'var(--text-muted)' }}>Cargando navegación...</div>;
   }
 
   return (
@@ -207,11 +207,11 @@ export function AdminNavegacion() {
         fontFamily: 'var(--font-display)', fontSize: 28, fontWeight: 400,
         color: 'var(--text)', marginBottom: 8,
       }}>
-        Navegacion
+        Navegación
       </h1>
       <p style={{ fontSize: 14, color: 'var(--text-muted)', marginBottom: 32, lineHeight: 1.6 }}>
-        Configura los submenus que aparecen en la barra de categorias (la barra marron).
-        Maximo {MAX_ITEMS} elementos por categoria.
+        Configura los submenús que aparecen en la barra de categorías (la barra marrón).
+        Máximo {MAX_ITEMS} elementos por categoría.
       </p>
 
       {/* ── Promo nav slot ────────────────────────────────────────────────── */}
@@ -229,7 +229,7 @@ export function AdminNavegacion() {
           Link Promocional
         </p>
         <p style={{ fontSize: 13, color: 'var(--text-soft)', marginBottom: 20, lineHeight: 1.5 }}>
-          Aparece como el 4to enlace en el menu movil y como un boton rosa en el menu de escritorio.
+          Aparece como el 4to enlace en el menú móvil y como un botón rosa en el menú de escritorio.
         </p>
 
         <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', marginBottom: 16 }}>
@@ -290,7 +290,7 @@ export function AdminNavegacion() {
               }}
             >
               <option value="ofertas">Productos en oferta</option>
-              <option value="badge">Badge especifico</option>
+              <option value="badge">Badge específico</option>
               <option value="custom">Link personalizado</option>
             </select>
           </div>
@@ -374,7 +374,7 @@ export function AdminNavegacion() {
               fontSize: 14, fontWeight: 600,
               color: promoFeedback.includes('Error') ? '#ef4444' : '#25D366',
             }}>
-              {promoFeedback.includes('Error') ? '! ' : '> '}{promoFeedback}
+              {promoFeedback.includes('Error') ? '! ' : '✓ '}{promoFeedback}
             </span>
           )}
         </div>
@@ -430,14 +430,14 @@ export function AdminNavegacion() {
                   fontFamily: 'var(--font-body)',
                 }}
               >
-                + Anadir enlace
+                + Añadir enlace
               </button>
             )}
           </div>
 
           {(!dropdowns[editingCategory] || dropdowns[editingCategory].length === 0) && (
             <p style={{ fontSize: 14, color: 'var(--text-muted)', fontStyle: 'italic' }}>
-              No hay enlaces configurados. Anade uno.
+              No hay enlaces configurados. Añade uno.
             </p>
           )}
 
@@ -537,7 +537,7 @@ export function AdminNavegacion() {
             fontSize: 14, fontWeight: 600,
             color: feedback.includes('Error') ? '#ef4444' : '#25D366',
           }}>
-            {feedback.includes('Error') ? '! ' : '> '}{feedback}
+            {feedback.includes('Error') ? '! ' : '✓ '}{feedback}
           </span>
         )}
       </div>
@@ -550,8 +550,8 @@ export function AdminNavegacion() {
         border: '1px solid rgba(235,25,130,0.1)',
       }}>
         <p style={{ fontSize: 13, color: 'var(--text-soft)', lineHeight: 1.6 }}>
-          <strong style={{ color: 'var(--hot)' }}>Tip:</strong> Los submenus aparecen cuando el usuario pasa el cursor
-          sobre cada categoria en la barra marron. Los cambios se reflejaran en la tienda despues de guardar.
+          <strong style={{ color: 'var(--hot)' }}>Tip:</strong> Los submenús aparecen cuando el usuario pasa el cursor
+          sobre cada categoría en la barra marrón. Los cambios se reflejarán en la tienda después de guardar.
         </p>
       </div>
     </div>

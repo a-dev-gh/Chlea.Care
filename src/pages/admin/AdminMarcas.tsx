@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Button } from '../../components/ui/Button';
 import { Modal } from '../../components/ui/Modal';
+import { showToast } from '../../components/ui/Toast';
 import { adminFetch, adminInsert, adminUpdate, adminDelete } from '../../utils/adminApi';
 import { SEED_BRANDS } from '../../data/seedData';
 import { supabase } from '../../utils/supabase';
@@ -95,19 +96,21 @@ export function AdminMarcas() {
       if (isNew) {
         const { id, ...rest } = payload;
         const { error } = await adminInsert<Brand>('brands', rest as any);
-        if (error) { alert('Error al guardar: ' + error); } else { await loadBrands(); }
+        if (error) { showToast('Error al guardar: ' + error, 'error'); } else { await loadBrands(); showToast('Marca creada', 'success'); }
       } else {
         const { id, ...rest } = payload;
         const { error } = await adminUpdate<Brand>('brands', editing.id!, rest as any);
-        if (error) { alert('Error al guardar: ' + error); } else { await loadBrands(); }
+        if (error) { showToast('Error al guardar: ' + error, 'error'); } else { await loadBrands(); showToast('Marca actualizada', 'success'); }
       }
     } else {
       // Local fallback
       if (isNew) {
         const newBrand = { ...payload, id: String(Date.now()), created_at: new Date().toISOString() } as Brand;
         setBrands(prev => [...prev, newBrand]);
+        showToast('Marca creada', 'success');
       } else {
         setBrands(prev => prev.map(b => b.id === editing.id ? { ...b, ...payload } as Brand : b));
+        showToast('Marca actualizada', 'success');
       }
     }
 
@@ -118,10 +121,11 @@ export function AdminMarcas() {
   async function handleDelete(id: string) {
     if (supabase) {
       const { ok, error } = await adminDelete('brands', id);
-      if (error) alert('Error al eliminar: ' + error);
-      if (ok) await loadBrands();
+      if (error) { showToast('Error al eliminar: ' + error, 'error'); }
+      if (ok) { await loadBrands(); showToast('Marca eliminada', 'success'); }
     } else {
       setBrands(prev => prev.filter(b => b.id !== id));
+      showToast('Marca eliminada', 'success');
     }
     setConfirmDelete(null);
   }

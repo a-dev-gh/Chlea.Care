@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Button } from '../../components/ui/Button';
 import { adminFetch, adminInsert, adminUpdate, adminDelete } from '../../utils/adminApi';
+import { showToast } from '../../components/ui/Toast';
 import { supabase } from '../../utils/supabase';
 import { SEED_BLOG_POSTS, BLOG_CATEGORIES } from '../../data/seedBlog';
 import type { BlogPost } from '../../types/database';
@@ -36,6 +37,7 @@ export function AdminBlog() {
   const [editing, setEditing] = useState<Partial<BlogPost> | null>(null);
   const [saving, setSaving] = useState(false);
   const [feedback, setFeedback] = useState('');
+  const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
 
   const loadPosts = useCallback(async () => {
     setLoading(true);
@@ -73,11 +75,11 @@ export function AdminBlog() {
       if (isExisting) {
         const { id, created_at, ...rest } = payload as any;
         const { error } = await adminUpdate<BlogPost>('blog_posts', editing.id!, rest);
-        if (error) { alert('Error al guardar: ' + error); setSaving(false); return; }
+        if (error) { showToast('Error al guardar: ' + error, 'error'); setSaving(false); return; }
       } else {
         const { id, created_at, ...rest } = payload as any;
         const { error } = await adminInsert<BlogPost>('blog_posts', rest);
-        if (error) { alert('Error al guardar: ' + error); setSaving(false); return; }
+        if (error) { showToast('Error al guardar: ' + error, 'error'); setSaving(false); return; }
       }
       await loadPosts();
     } else {
@@ -94,26 +96,29 @@ export function AdminBlog() {
     setEditing(null);
     setFeedback('Post guardado');
     setTimeout(() => setFeedback(''), 2500);
+    showToast('Post guardado', 'success');
   }
 
   async function toggleVisibility(post: BlogPost) {
     const newVal = !post.is_visible;
     if (supabase) {
       const { error } = await adminUpdate<BlogPost>('blog_posts', post.id, { is_visible: newVal } as any);
-      if (error) alert('Error: ' + error);
+      if (error) { showToast('Error: ' + error, 'error'); } else { showToast(newVal ? 'Post publicado' : 'Post ocultado', 'info'); }
       await loadPosts();
     } else {
       setPosts(prev => prev.map(p => p.id === post.id ? { ...p, is_visible: newVal } : p));
+      showToast(newVal ? 'Post publicado' : 'Post ocultado', 'info');
     }
   }
 
   async function deletePost(id: string) {
     if (supabase) {
       const { ok, error } = await adminDelete('blog_posts', id);
-      if (error) alert('Error al eliminar: ' + error);
-      if (ok) await loadPosts();
+      if (error) { showToast('Error al eliminar: ' + error, 'error'); }
+      if (ok) { await loadPosts(); showToast('Post eliminado', 'success'); }
     } else {
       setPosts(prev => prev.filter(p => p.id !== id));
+      showToast('Post eliminado', 'success');
     }
   }
 
@@ -253,7 +258,7 @@ export function AdminBlog() {
         </div>
       )}
 
-      {feedback && <p style={{ fontSize: 14, color: '#25D366', fontWeight: 600, marginBottom: 16 }}>{'> '}{feedback}</p>}
+      {feedback && <p style={{ fontSize: 14, color: '#25D366', fontWeight: 600, marginBottom: 16 }}>✓ {feedback}</p>}
 
       {/* Posts table */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -293,23 +298,53 @@ export function AdminBlog() {
               {post.is_visible ? 'Visible' : 'Borrador'}
             </button>
 
-            <button onClick={() => setEditing({ ...post })} style={{
-              background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-soft)', padding: 4,
-            }}>
+            <button
+              onClick={() => setEditing({ ...post })}
+              aria-label="Editar"
+              title="Editar"
+              style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-soft)', padding: 4 }}
+            >
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
                 <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
               </svg>
             </button>
 
-            <button onClick={() => deletePost(post.id)} style={{
-              background: 'none', border: 'none', cursor: 'pointer', color: '#e74c3c', padding: 4,
-            }}>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <polyline points="3 6 5 6 21 6"/>
-                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
-              </svg>
-            </button>
+            {confirmDelete === post.id ? (
+              <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>¿Eliminar?</span>
+                <button
+                  onClick={() => { deletePost(post.id); setConfirmDelete(null); }}
+                  style={{
+                    padding: '3px 10px', borderRadius: 'var(--r-sm)',
+                    border: '1px solid rgba(239,68,68,0.4)', background: 'none',
+                    fontSize: 12, fontWeight: 600, color: '#ef4444',
+                    cursor: 'pointer', fontFamily: 'var(--font-body)',
+                  }}
+                >Sí</button>
+                <button
+                  onClick={() => setConfirmDelete(null)}
+                  style={{
+                    padding: '3px 10px', borderRadius: 'var(--r-sm)',
+                    border: '1px solid var(--border2)', background: 'none',
+                    fontSize: 12, fontWeight: 600, color: 'var(--text-muted)',
+                    cursor: 'pointer', fontFamily: 'var(--font-body)',
+                  }}
+                >No</button>
+              </span>
+            ) : (
+              <button
+                onClick={() => setConfirmDelete(post.id)}
+                aria-label="Eliminar"
+                title="Eliminar"
+                style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#e74c3c', padding: 4 }}
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <polyline points="3 6 5 6 21 6"/>
+                  <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                </svg>
+              </button>
+            )}
           </div>
         ))}
       </div>

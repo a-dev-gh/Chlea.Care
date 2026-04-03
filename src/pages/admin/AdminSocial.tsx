@@ -3,6 +3,7 @@ import { Button } from '../../components/ui/Button';
 import { Modal } from '../../components/ui/Modal';
 import { adminFetch, adminInsert, adminUpdate, adminDelete } from '../../utils/adminApi';
 import { supabase } from '../../utils/supabase';
+import { showToast } from '../../components/ui/Toast';
 import type { InstagramPost } from '../../types/database';
 
 // Seed posts fallback (no DB table yet)
@@ -45,19 +46,21 @@ export function AdminSocial() {
     if (supabase) {
       if (isNew) {
         const { error } = await adminInsert<InstagramPost>('instagram_posts', editing);
-        if (error) { alert('Error al guardar: ' + error); } else { await loadPosts(); }
+        if (error) { showToast('Error al guardar: ' + error, 'error'); } else { await loadPosts(); showToast('Post agregado', 'success'); }
       } else {
         const { id, created_at, ...rest } = editing as any;
         const { error } = await adminUpdate<InstagramPost>('instagram_posts', editing.id!, rest);
-        if (error) { alert('Error al guardar: ' + error); } else { await loadPosts(); }
+        if (error) { showToast('Error al guardar: ' + error, 'error'); } else { await loadPosts(); showToast('Post actualizado', 'success'); }
       }
     } else {
       // Local fallback
       if (isNew) {
         const newPost = { ...editing, id: String(Date.now()), created_at: new Date().toISOString() } as InstagramPost;
         setPosts(prev => [...prev, newPost]);
+        showToast('Post agregado', 'success');
       } else {
         setPosts(prev => prev.map(p => p.id === editing.id ? { ...p, ...editing } as InstagramPost : p));
+        showToast('Post actualizado', 'success');
       }
     }
 
@@ -68,10 +71,11 @@ export function AdminSocial() {
   async function handleDelete(id: string) {
     if (supabase) {
       const { ok, error } = await adminDelete('instagram_posts', id);
-      if (error) alert('Error al eliminar: ' + error);
-      if (ok) await loadPosts();
+      if (error) { showToast('Error al eliminar: ' + error, 'error'); }
+      if (ok) { await loadPosts(); showToast('Post eliminado', 'success'); }
     } else {
       setPosts(prev => prev.filter(p => p.id !== id));
+      showToast('Post eliminado', 'success');
     }
   }
 
@@ -113,10 +117,11 @@ export function AdminSocial() {
     const newVal = !post.is_visible;
     if (supabase) {
       const { error } = await adminUpdate('instagram_posts', post.id, { is_visible: newVal });
-      if (error) alert('Error: ' + error);
+      if (error) { showToast('Error: ' + error, 'error'); } else { showToast(newVal ? 'Post visible' : 'Post oculto', 'info'); }
       await loadPosts();
     } else {
       setPosts(prev => prev.map(p => p.id === post.id ? { ...p, is_visible: newVal } : p));
+      showToast(newVal ? 'Post visible' : 'Post oculto', 'info');
     }
   }
 
