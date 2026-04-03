@@ -29,9 +29,7 @@ export function CategoryNav() {
 
   useEffect(() => {
     fetchNavDropdowns().then(data => {
-      // Only replace if we got real data (at least one category has items)
-      const hasData = Object.values(data).some(items => items.length > 0);
-      if (hasData) setDropdowns(data);
+      setDropdowns(data);
     });
   }, []);
 

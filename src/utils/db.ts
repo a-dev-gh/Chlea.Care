@@ -169,7 +169,7 @@ export async function fetchSettings(): Promise<SiteSettings> {
 
 /** Fetch nav dropdowns grouped by category_slug, ordered by sort_order. */
 export async function fetchNavDropdowns(): Promise<Record<string, NavDropdown[]>> {
-  if (!supabase) return seedNavDropdowns();
+  if (!supabase) return {};
 
   const { data, error } = await supabase
     .from('nav_dropdowns')
@@ -177,8 +177,8 @@ export async function fetchNavDropdowns(): Promise<Record<string, NavDropdown[]>
     .order('sort_order');
 
   if (error) {
-    console.warn('[db] fetchNavDropdowns failed, using seed data:', error.message);
-    return seedNavDropdowns();
+    console.warn('[db] fetchNavDropdowns failed:', error.message);
+    return {};
   }
 
   const grouped: Record<string, NavDropdown[]> = {};

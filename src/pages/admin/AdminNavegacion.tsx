@@ -4,7 +4,7 @@ import { adminFetch, adminDeleteWhere, adminBulkInsert, adminUpsertSettings } fr
 import { SEED_NAV_DROPDOWNS } from '../../data/seedData';
 import { supabase } from '../../utils/supabase';
 import { fetchSettings } from '../../utils/db';
-import type { NavDropdown, LabelGroup, BadgeEntry } from '../../types/database';
+import type { NavDropdown, LabelGroup, BadgeEntry, Brand } from '../../types/database';
 
 const MAX_ITEMS = 5;
 
@@ -50,9 +50,10 @@ export function AdminNavegacion() {
   const [promoSaving, setPromoSaving]       = useState(false);
   const [promoFeedback, setPromoFeedback]   = useState('');
 
-  // Label groups and DB badges for the nav label picker
+  // Label groups, DB badges, and brands for the nav pickers
   const [labelGroups, setLabelGroups]       = useState<LabelGroup[]>([]);
   const [dbBadges, setDbBadges]             = useState<BadgeEntry[]>([]);
+  const [allBrands, setAllBrands]           = useState<Brand[]>([]);
   // Which category's label picker panel is open (null = closed)
   const [labelPickerCat, setLabelPickerCat] = useState<string | null>(null);
 
@@ -66,26 +67,25 @@ export function AdminNavegacion() {
   const loadDropdowns = useCallback(async () => {
     setLoading(true);
 
-    // Load nav dropdowns, label groups, and DB badges in parallel
-    const [data, groups, bdgs] = await Promise.all([
+    // Load nav dropdowns, label groups, DB badges, and brands in parallel
+    const [data, groups, bdgs, brands] = await Promise.all([
       adminFetch<NavDropdown>('nav_dropdowns', { orderBy: 'sort_order' }),
       adminFetch<LabelGroup>('label_groups', { orderBy: 'sort_order' }),
       adminFetch<BadgeEntry>('badges', { orderBy: 'sort_order' }),
+      adminFetch<Brand>('brands', { orderBy: 'name' }),
     ]);
 
-    if (data.length > 0) {
-      const grouped: Record<string, NavDropdown[]> = {};
-      for (const row of data) {
-        if (!grouped[row.category_slug]) grouped[row.category_slug] = [];
-        grouped[row.category_slug].push(row);
-      }
-      setDropdowns(grouped);
-    } else {
-      setDropdowns(seedToGrouped());
+    // Group nav dropdowns — no seed fallback, start empty if none configured
+    const grouped: Record<string, NavDropdown[]> = {};
+    for (const row of data) {
+      if (!grouped[row.category_slug]) grouped[row.category_slug] = [];
+      grouped[row.category_slug].push(row);
     }
+    setDropdowns(grouped);
 
     setLabelGroups(groups);
     setDbBadges(bdgs);
+    setAllBrands(brands);
 
     // Load existing promo nav settings
     const settings = await fetchSettings();
@@ -154,6 +154,40 @@ export function AdminNavegacion() {
       next[cat] = arr;
       return next;
     });
+  }
+
+  // Check whether a brand is already in the marcas dropdown
+  function isBrandAdded(brandSlug: string): boolean {
+    const href = `/marcas/${brandSlug}`;
+    return (dropdowns['marcas'] ?? []).some(item => item.href === href);
+  }
+
+  // Toggle a brand in/out of the marcas dropdown
+  function toggleBrandNavItem(brand: Brand) {
+    const href = `/marcas/${brand.slug}`;
+    const existing = dropdowns['marcas'] ?? [];
+    const alreadyAdded = existing.some(item => item.href === href);
+
+    if (alreadyAdded) {
+      setDropdowns(prev => ({
+        ...prev,
+        marcas: (prev['marcas'] ?? []).filter(item => item.href !== href),
+      }));
+    } else {
+      if (existing.length >= MAX_ITEMS) return;
+      setDropdowns(prev => {
+        const next = { ...prev };
+        if (!next['marcas']) next['marcas'] = [];
+        next['marcas'] = [...next['marcas'], {
+          id: `new-${Date.now()}-${brand.slug}`,
+          category_slug: 'marcas',
+          label: brand.name,
+          href,
+          sort_order: next['marcas'].length,
+        }];
+        return next;
+      });
+    }
   }
 
   // Check whether a label value is already in a category's dropdown items
@@ -572,23 +606,81 @@ export function AdminNavegacion() {
             </div>
           ))}
 
-          {/* ── "Agregar desde etiquetas" button — opens label picker panel ── */}
-          {labelGroups.length > 0 && (
-            <button
-              onClick={() => setLabelPickerCat(labelPickerCat === editingCategory ? null : editingCategory)}
-              style={{
-                background: 'none', border: '1px dashed var(--hot)', color: 'var(--hot)',
-                borderRadius: 'var(--r-sm)', padding: '6px 14px', fontSize: 12,
-                fontWeight: 600, cursor: 'pointer', fontFamily: 'var(--font-body)',
-                marginTop: 8,
-              }}
-            >
-              + Agregar desde etiquetas
-            </button>
+          {/* ── Quick-add picker button ── */}
+          {editingCategory === 'marcas' ? (
+            /* Brand picker for Marcas category */
+            allBrands.length > 0 && (
+              <button
+                onClick={() => setLabelPickerCat(labelPickerCat === editingCategory ? null : editingCategory)}
+                style={{
+                  background: 'none', border: '1px dashed var(--hot)', color: 'var(--hot)',
+                  borderRadius: 'var(--r-sm)', padding: '6px 14px', fontSize: 12,
+                  fontWeight: 600, cursor: 'pointer', fontFamily: 'var(--font-body)',
+                  marginTop: 8,
+                }}
+              >
+                + Agregar desde marcas
+              </button>
+            )
+          ) : (
+            /* Label picker for other categories */
+            labelGroups.length > 0 && (
+              <button
+                onClick={() => setLabelPickerCat(labelPickerCat === editingCategory ? null : editingCategory)}
+                style={{
+                  background: 'none', border: '1px dashed var(--hot)', color: 'var(--hot)',
+                  borderRadius: 'var(--r-sm)', padding: '6px 14px', fontSize: 12,
+                  fontWeight: 600, cursor: 'pointer', fontFamily: 'var(--font-body)',
+                  marginTop: 8,
+                }}
+              >
+                + Agregar desde etiquetas
+              </button>
+            )
           )}
 
-          {/* Label picker panel — shown when the button above is clicked */}
-          {labelPickerCat === editingCategory && (
+          {/* Picker panel — brands for marcas, labels for others */}
+          {labelPickerCat === editingCategory && editingCategory === 'marcas' && (
+            <div style={{
+              marginTop: 12, background: 'var(--cream)',
+              border: '1px solid var(--border)', borderRadius: 'var(--r-sm)', padding: 12,
+            }}>
+              <p style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', letterSpacing: 1, textTransform: 'uppercase', marginBottom: 12 }}>
+                Seleccionar marcas
+              </p>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px 20px' }}>
+                {allBrands.map(brand => {
+                  const checked = isBrandAdded(brand.slug);
+                  const atMax = (dropdowns['marcas']?.length ?? 0) >= MAX_ITEMS;
+                  return (
+                    <label key={brand.id} style={{
+                      display: 'flex', alignItems: 'center', gap: 6,
+                      cursor: checked || !atMax ? 'pointer' : 'not-allowed',
+                      fontSize: 13,
+                      color: checked ? 'var(--hot)' : atMax && !checked ? 'var(--text-muted)' : 'var(--text-soft)',
+                      userSelect: 'none',
+                    }}>
+                      <input
+                        type="checkbox"
+                        checked={checked}
+                        disabled={atMax && !checked}
+                        onChange={() => toggleBrandNavItem(brand)}
+                        style={{ accentColor: 'var(--hot)', width: 15, height: 15 }}
+                      />
+                      {brand.name}
+                    </label>
+                  );
+                })}
+              </div>
+              {(dropdowns['marcas']?.length ?? 0) >= MAX_ITEMS && (
+                <p style={{ fontSize: 12, color: 'var(--text-muted)', fontStyle: 'italic', marginTop: 4 }}>
+                  Límite de {MAX_ITEMS} elementos alcanzado.
+                </p>
+              )}
+            </div>
+          )}
+
+          {labelPickerCat === editingCategory && editingCategory !== 'marcas' && (
             <div style={{
               marginTop: 12,
               background: 'var(--cream)',
