@@ -1,14 +1,15 @@
+import { useNavigate } from 'react-router-dom';
 import { useCart } from '../../hooks/useCart';
 import { formatPrice } from '../../utils/formatPrice';
-import { buildCartMessage, openWhatsApp } from '../../utils/whatsapp';
 
 export function CartDrawer() {
   const { isOpen, closeCart, items, removeItem, updateQty, total } = useCart();
+  const navigate = useNavigate();
 
   function handleCheckout() {
     if (items.length === 0) return;
-    openWhatsApp(buildCartMessage(items));
     closeCart();
+    navigate('/carrito');
   }
 
   if (!isOpen) return null;
