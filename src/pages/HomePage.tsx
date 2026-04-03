@@ -462,11 +462,31 @@ export function HomePage() {
             min-width: unset !important;
             border-radius: 0 !important;
             padding: 48px 20px !important;
-            background: rgba(255,255,255,0.35) !important;
-            backdrop-filter: blur(4px) !important;
-            -webkit-backdrop-filter: blur(4px) !important;
+            background: transparent !important;
+            backdrop-filter: none !important;
+            -webkit-backdrop-filter: none !important;
             box-shadow: none !important;
             border: none !important;
+            display: flex !important;
+            flex-direction: column !important;
+            align-items: flex-start !important;
+            gap: 12px !important;
+          }
+          .editorial-panel > * {
+            background: rgba(255,255,255,0.72) !important;
+            backdrop-filter: blur(16px) !important;
+            -webkit-backdrop-filter: blur(16px) !important;
+            border-radius: 12px !important;
+            padding: 10px 16px !important;
+            border: 1px solid rgba(255,255,255,0.5) !important;
+          }
+          .editorial-panel > h2 {
+            padding: 12px 18px !important;
+            font-size: clamp(1.8rem, 4vw, 2.4rem) !important;
+          }
+          .editorial-panel > a {
+            padding: 14px 28px !important;
+            margin-top: 4px !important;
           }
         }
       `}</style>
