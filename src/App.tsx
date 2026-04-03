@@ -34,7 +34,6 @@ import { CartPage } from './pages/CartPage';
 import { NotFoundPage } from './pages/NotFoundPage';
 import { WhatsAppFloat } from './components/WhatsAppFloat';
 import { BackToTop } from './components/ui/BackToTop';
-import { CookieBanner } from './components/ui/CookieBanner';
 
 function PublicLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -50,7 +49,6 @@ function PublicLayout({ children }: { children: React.ReactNode }) {
       <CartDrawer />
       <WhatsAppFloat />
       <BackToTop />
-      <CookieBanner />
     </div>
   );
 }
