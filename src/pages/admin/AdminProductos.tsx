@@ -4,6 +4,7 @@ import { formatPrice } from '../../utils/formatPrice';
 import { Badge } from '../../components/ui/Badge';
 import { Button } from '../../components/ui/Button';
 import { Modal } from '../../components/ui/Modal';
+import { ImageUploader } from '../../components/ui/ImageUploader';
 import { adminFetch, adminInsert, adminUpdate, adminDelete } from '../../utils/adminApi';
 import { SEED_BRANDS } from '../../data/seedData';
 import { supabase } from '../../utils/supabase';
@@ -593,18 +594,27 @@ export function AdminProductos() {
               {/* ── RIGHT COLUMN: images, toggles, labels ── */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
 
-                {/* Main image URL + thumbnail */}
+                {/* Main image — uploader + URL fallback */}
                 <div>
-                  <label style={labelStyle}>Imagen principal (URL)</label>
+                  <label style={labelStyle}>Imagen principal</label>
+                  {/* Drop zone / click-to-upload */}
+                  <ImageUploader
+                    size="main"
+                    currentUrl={editing.image_url || undefined}
+                    onUpload={url => setEditing({ ...editing, image_url: url })}
+                  />
+                  {/* OR divider */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, margin: '8px 0' }}>
+                    <div style={{ flex: 1, height: 1, background: 'var(--border)' }} />
+                    <span style={{ fontSize: 11, color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>o pega una URL</span>
+                    <div style={{ flex: 1, height: 1, background: 'var(--border)' }} />
+                  </div>
                   <input
                     value={editing.image_url || ''}
                     onChange={e => setEditing({ ...editing, image_url: e.target.value })}
                     placeholder="https://..."
                     style={inputStyle}
                   />
-                  {editing.image_url && (
-                    <ImageThumb url={editing.image_url} size={64} />
-                  )}
                 </div>
 
                 {/* Gallery images + thumbnails + star-promote button */}
@@ -623,7 +633,19 @@ export function AdminProductos() {
                     )}
                   </div>
                   {(editing.image_urls ?? []).map((url, idx) => (
-                    <div key={idx} style={{ marginBottom: 10 }}>
+                    <div key={idx} style={{ marginBottom: 14 }}>
+                      {/* Small uploader for this gallery slot */}
+                      <ImageUploader
+                        size="gallery"
+                        currentUrl={url || undefined}
+                        onUpload={newUrl => updateGalleryImage(idx, newUrl)}
+                      />
+                      {/* OR divider */}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, margin: '6px 0' }}>
+                        <div style={{ flex: 1, height: 1, background: 'var(--border)' }} />
+                        <span style={{ fontSize: 10, color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>o URL</span>
+                        <div style={{ flex: 1, height: 1, background: 'var(--border)' }} />
+                      </div>
                       <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
                         <input
                           value={url}
@@ -656,8 +678,6 @@ export function AdminProductos() {
                           ×
                         </button>
                       </div>
-                      {/* Gallery thumbnail */}
-                      {url && <ImageThumb url={url} size={48} />}
                     </div>
                   ))}
                 </div>
