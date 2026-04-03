@@ -127,7 +127,7 @@ export function HomePage() {
                 display: 'inline-flex', alignItems: 'center', gap: 10,
                 background: 'var(--hot)',
                 color: '#fff',
-                borderRadius: '50% 40% 55% 45% / 55% 50% 45% 50%',
+                borderRadius: 'var(--r-pill)',
                 padding: '18px 42px',
                 fontSize: 16, fontWeight: 700, fontFamily: 'var(--font-body)',
                 textDecoration: 'none',
@@ -427,21 +427,17 @@ export function HomePage() {
               <Link to={section.href} className="liquid-cta" style={{
                 display: 'inline-flex', alignItems: 'center', gap: 8,
                 padding: '16px 34px',
-                borderRadius: '50% 40% 55% 45% / 55% 50% 45% 50%',
+                borderRadius: 'var(--r-pill)',
                 border: 'none',
                 color: '#fff',
                 fontSize: 13, fontWeight: 700,
                 letterSpacing: '0.5px',
                 textTransform: 'uppercase',
                 textDecoration: 'none',
-                transition: 'all 0.4s cubic-bezier(0.34,1.56,0.64,1)',
+                transition: 'all 0.3s ease',
                 background: 'var(--hot)',
                 boxShadow: '0 4px 20px rgba(235,25,130,0.35), inset 0 1px 0 rgba(255,255,255,0.2)',
-                position: 'relative',
-                overflow: 'hidden',
               }}
-                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderRadius = '45% 55% 50% 40% / 50% 45% 55% 50%'; (e.currentTarget as HTMLElement).style.transform = 'scale(1.05)'; }}
-                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderRadius = '50% 40% 55% 45% / 55% 50% 45% 50%'; (e.currentTarget as HTMLElement).style.transform = 'scale(1)'; }}
               >
                 {section.cta}
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
@@ -454,21 +450,17 @@ export function HomePage() {
       ))}
 
       <style>{`
-        /* Liquid blob button — shape breathing + flowing gradient */
+        /* Liquid flowing gradient on pill-shaped buttons */
         .liquid-cta {
-          background: linear-gradient(135deg, #EB1982, #ffc2d1, #EB1982, #ff6bab) !important;
+          background: linear-gradient(135deg, #EB1982, #ff6bab, #ffc2d1, #EB1982) !important;
           background-size: 300% 300% !important;
-          animation: liquidBreathe 4s ease-in-out infinite, liquidFlow 6s ease-in-out infinite;
+          border-radius: var(--r-pill) !important;
+          animation: liquidFlow 5s ease-in-out infinite;
         }
         .liquid-cta:hover {
-          animation: liquidFlow 3s ease-in-out infinite;
-          transform: scale(1.06);
-        }
-        @keyframes liquidBreathe {
-          0%, 100% { border-radius: 50% 40% 55% 45% / 55% 50% 45% 50%; }
-          25% { border-radius: 45% 55% 40% 50% / 50% 45% 55% 50%; }
-          50% { border-radius: 55% 45% 50% 40% / 45% 55% 50% 45%; }
-          75% { border-radius: 40% 50% 45% 55% / 50% 40% 45% 55%; }
+          animation: liquidFlow 2.5s ease-in-out infinite;
+          transform: scale(1.04);
+          box-shadow: 0 6px 28px rgba(235,25,130,0.45) !important;
         }
         @keyframes liquidFlow {
           0%, 100% { background-position: 0% 50%; }
