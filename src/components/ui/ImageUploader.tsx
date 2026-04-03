@@ -6,6 +6,10 @@ interface ImageUploaderProps {
   onUpload: (url: string) => void;
   currentUrl?: string;
   size?: 'main' | 'gallery';
+  /** Optional max dimensions — image will be resized to fit within this box before upload. */
+  resizeTo?: { width: number; height: number };
+  /** Override the storage folder path (default: 'products'). */
+  folder?: string;
 }
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB (before conversion)
@@ -14,21 +18,36 @@ const BUCKET = 'product-images';
 
 /**
  * Convert any image file to WebP using Canvas.
+ * Optionally resizes to fit within maxW x maxH while preserving aspect ratio.
  * Falls back to the original file if conversion fails (e.g. HEIC on some browsers).
  */
-async function convertToWebP(file: File, quality = 0.85): Promise<{ blob: Blob; name: string }> {
+async function convertToWebP(
+  file: File,
+  quality = 0.85,
+  maxSize?: { width: number; height: number },
+): Promise<{ blob: Blob; name: string }> {
   return new Promise((resolve) => {
     const img = new Image();
     const url = URL.createObjectURL(file);
 
     img.onload = () => {
       URL.revokeObjectURL(url);
+      let w = img.naturalWidth;
+      let h = img.naturalHeight;
+
+      // Resize to fit within maxSize while preserving aspect ratio
+      if (maxSize) {
+        const ratio = Math.min(maxSize.width / w, maxSize.height / h, 1);
+        w = Math.round(w * ratio);
+        h = Math.round(h * ratio);
+      }
+
       const canvas = document.createElement('canvas');
-      canvas.width = img.naturalWidth;
-      canvas.height = img.naturalHeight;
+      canvas.width = w;
+      canvas.height = h;
       const ctx = canvas.getContext('2d');
       if (!ctx) { resolve({ blob: file, name: file.name }); return; }
-      ctx.drawImage(img, 0, 0);
+      ctx.drawImage(img, 0, 0, w, h);
       canvas.toBlob(
         (blob) => {
           if (blob) {
@@ -52,7 +71,7 @@ async function convertToWebP(file: File, quality = 0.85): Promise<{ blob: Blob; 
   });
 }
 
-export function ImageUploader({ onUpload, currentUrl, size = 'main' }: ImageUploaderProps) {
+export function ImageUploader({ onUpload, currentUrl, size = 'main', resizeTo, folder = 'products' }: ImageUploaderProps) {
   const [uploading, setUploading] = useState(false);
   const [dragOver, setDragOver] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -79,10 +98,10 @@ export function ImageUploader({ onUpload, currentUrl, size = 'main' }: ImageUplo
 
     setUploading(true);
 
-    // Convert to WebP automatically
-    const { blob, name } = await convertToWebP(file);
+    // Convert to WebP (and optionally resize)
+    const { blob, name } = await convertToWebP(file, 0.85, resizeTo);
 
-    const path = `products/${Date.now()}-${name.replace(/\s+/g, '_')}`;
+    const path = `${folder}/${Date.now()}-${name.replace(/\s+/g, '_')}`;
 
     const { error: uploadError } = await supabase.storage
       .from(BUCKET)

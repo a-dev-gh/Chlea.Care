@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { Button } from '../../components/ui/Button';
 import { Modal } from '../../components/ui/Modal';
 import { showToast } from '../../components/ui/Toast';
+import { ImageUploader } from '../../components/ui/ImageUploader';
 import { adminFetch, adminInsert, adminUpdate, adminDelete } from '../../utils/adminApi';
 import { SEED_BRANDS } from '../../data/seedData';
 import { supabase } from '../../utils/supabase';
@@ -247,7 +248,7 @@ export function AdminMarcas() {
             Eliminar marca
           </h3>
           <p style={{ fontSize: 14, color: 'var(--text-muted)', marginBottom: 24, lineHeight: 1.5 }}>
-            Esta accion eliminara la marca permanentemente.
+            Esta acción eliminará la marca permanentemente.
           </p>
           <div style={{ display: 'flex', gap: 12 }}>
             <Button onClick={() => confirmDelete && handleDelete(confirmDelete)} style={{ background: '#ef4444' }} fullWidth>
@@ -287,11 +288,19 @@ export function AdminMarcas() {
                 />
               </div>
               <div>
-                <label style={labelStyle}>URL del Logo</label>
+                <label style={labelStyle}>Logo de la marca</label>
+                <ImageUploader
+                  onUpload={url => setEditing({ ...editing, logo_url: url })}
+                  currentUrl={editing.logo_url}
+                  size="gallery"
+                  resizeTo={{ width: 400, height: 200 }}
+                  folder="brands"
+                />
+                <p style={{ fontSize: 11, color: 'var(--text-muted)', margin: '6px 0 4px', textAlign: 'center' }}>o pega una URL</p>
                 <input
                   type="text" value={editing.logo_url}
                   onChange={e => setEditing({ ...editing, logo_url: e.target.value })}
-                  placeholder="https://... o /brand logos/..."
+                  placeholder="https://..."
                   style={inputStyle}
                 />
               </div>

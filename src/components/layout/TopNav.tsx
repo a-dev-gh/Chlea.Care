@@ -2,10 +2,13 @@ import { useState, useRef, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useCart } from '../../hooks/useCart';
 import { CartIcon } from '../ui/CartIcon';
-import { SEED_CATEGORIES, SEED_BRANDS, SEED_PRODUCTS } from '../../data/seedData';
+import { SEED_CATEGORIES } from '../../data/seedData';
+import { useProducts } from '../../hooks/useProducts';
+import { fetchBrands } from '../../utils/db';
 import { getBrandsForCategory, getCategoriesWithBrands } from '../../utils/brandFilters';
 import { useSiteSettings } from '../../hooks/useSiteSettings';
 import { formatPrice } from '../../utils/formatPrice';
+import type { Brand } from '../../types/database';
 
 const SEARCH_CATEGORIES = [
   { label: 'Todo', slug: '' },
@@ -31,6 +34,11 @@ export function TopNav() {
   const [searchMaxPrice, setSearchMaxPrice] = useState('');
   const [searchLabels, setSearchLabels] = useState<Record<string, string[]>>({});
 
+  // Live product + brand data from Supabase
+  const { allProducts } = useProducts();
+  const [allBrands, setAllBrands] = useState<Brand[]>([]);
+  useEffect(() => { fetchBrands().then(setAllBrands); }, []);
+
   // Featured label groups from admin settings
   const featuredLabelNames = (settings.search_featured_labels || '').split(',').map(s => s.trim()).filter(Boolean);
   const showPriceFilter = settings.search_price_filter !== 'false';
@@ -38,8 +46,8 @@ export function TopNav() {
   // Collect available values for featured label groups
   const featuredLabelGroups = featuredLabelNames.map(name => {
     const values = new Set<string>();
-    for (const p of SEED_PRODUCTS) {
-      if (!p.is_visible || !p.labels?.[name]) continue;
+    for (const p of allProducts) {
+      if (!p.labels?.[name]) continue;
       for (const v of p.labels[name]) values.add(v);
     }
     return { name, values: [...values].sort() };
@@ -51,13 +59,13 @@ export function TopNav() {
   const BRANDS_PER_PAGE = 5;
 
   // Categories that actually have brands with products
-  const catsWithBrands = getCategoriesWithBrands(SEED_PRODUCTS);
+  const catsWithBrands = getCategoriesWithBrands(allProducts);
   const brandCatTabs = SEED_CATEGORIES.filter(c => catsWithBrands.includes(c.slug));
 
   // Auto-select first available tab
   const activeBrandTab = brandsCategoryTab || (brandCatTabs[0]?.slug || '');
   const brandsInTab = activeBrandTab
-    ? getBrandsForCategory(activeBrandTab, SEED_PRODUCTS, SEED_BRANDS).filter(b => b.logo)
+    ? getBrandsForCategory(activeBrandTab, allProducts, allBrands).filter(b => b.logo_url)
     : [];
   const totalBrandPages = Math.ceil(brandsInTab.length / BRANDS_PER_PAGE);
   const visibleBrands = brandsInTab.slice(brandsPage * BRANDS_PER_PAGE, (brandsPage + 1) * BRANDS_PER_PAGE);
@@ -554,8 +562,8 @@ export function TopNav() {
                               transition: 'color 0.15s, padding-left 0.2s',
                             }}
                           >
-                            {brand.logo && (
-                              <img src={brand.logo} alt="" style={{
+                            {brand.logo_url && (
+                              <img src={brand.logo_url} alt="" style={{
                                 height: 20, width: 'auto', maxWidth: 60,
                                 objectFit: 'contain', opacity: 0.7,
                               }} />
