@@ -6,6 +6,7 @@ import { Button } from '../ui/Button';
 import { useCart } from '../../hooks/useCart';
 import { useAuthContext } from '../../contexts/AuthContext';
 import { useLists } from '../../hooks/useLists';
+import { useBadges } from '../../hooks/useBadges';
 import { ListPicker } from './ListPicker';
 import { formatPrice } from '../../utils/formatPrice';
 import { buildProductInquiry, openWhatsApp } from '../../utils/whatsapp';
@@ -99,6 +100,7 @@ export function ProductModal({ product, onClose }: ProductModalProps) {
   const addItem = useCart(s => s.addItem);
   const openCart = useCart(s => s.openCart);
   const { user, role } = useAuthContext();
+  const { getBadge } = useBadges();
 
   // Wishlist state
   const lists = useLists(s => s.lists);
@@ -337,9 +339,16 @@ export function ProductModal({ product, onClose }: ProductModalProps) {
                 {product.sale_percent > 0 && (
                   <Badge salePercent={product.sale_percent} />
                 )}
-                {product.badge && product.badge !== 'Oferta' && (
-                  <Badge text={product.badge} />
-                )}
+                {product.badge && product.badge !== 'Oferta' && (() => {
+                  const badgeInfo = getBadge(product.badge);
+                  return (
+                    <Badge
+                      text={product.badge}
+                      emoji={badgeInfo?.emoji}
+                      badgeColor={badgeInfo?.color}
+                    />
+                  );
+                })()}
               </div>
             )}
           </div>

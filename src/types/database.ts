@@ -193,6 +193,29 @@ export interface Testimonial {
   created_at: string;
 }
 
+/** A customer's profile data (name, phone, addresses, avatar). */
+export interface UserProfile {
+  id: string;
+  full_name: string;
+  phone: string;
+  avatar_url: string;
+  addresses: UserAddress[];
+  created_at: string;
+  updated_at: string;
+}
+
+/** A saved delivery address. */
+export interface UserAddress {
+  id: string;
+  label: string;       // e.g. "Casa", "Trabajo"
+  name: string;        // recipient name
+  phone: string;       // contact phone
+  address: string;     // street address
+  city: string;
+  province: string;
+  is_default: boolean;
+}
+
 /** An admin-managed badge (e.g. "Bestseller 🏆"). */
 export interface BadgeEntry {
   id: string;
@@ -258,7 +281,8 @@ export type TableName =
   | 'label_groups'
   | 'product_reviews'
   | 'testimonials'
-  | 'badges';
+  | 'badges'
+  | 'user_profiles';
 
 /**
  * Typed map of all known site-setting keys.

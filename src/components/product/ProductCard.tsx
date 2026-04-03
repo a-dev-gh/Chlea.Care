@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Badge } from '../ui/Badge';
 import { useCart } from '../../hooks/useCart';
 import { useLists } from '../../hooks/useLists';
+import { useBadges } from '../../hooks/useBadges';
 import { ListPicker } from './ListPicker';
 import { formatPrice } from '../../utils/formatPrice';
 import { buildProductInquiry, openWhatsApp } from '../../utils/whatsapp';
@@ -35,6 +36,7 @@ export function ProductCard({ product, isMen = false, onOpenModal }: ProductCard
   const lists = useLists(s => s.lists);
   const toggleInList = useLists(s => s.toggleInList);
   const isInAnyList = useLists(s => s.isInAnyList);
+  const { getBadge } = useBadges();
   const [adding, setAdding] = useState(false);
   const [pickerOpen, setPickerOpen] = useState(false);
 
@@ -115,9 +117,16 @@ export function ProductCard({ product, isMen = false, onOpenModal }: ProductCard
             {product.sale_percent > 0 && (
               <Badge salePercent={product.sale_percent} />
             )}
-            {product.badge && product.badge !== 'Oferta' && (
-              <Badge text={product.badge} />
-            )}
+            {product.badge && product.badge !== 'Oferta' && (() => {
+              const badgeInfo = getBadge(product.badge);
+              return (
+                <Badge
+                  text={product.badge}
+                  emoji={badgeInfo?.emoji}
+                  badgeColor={badgeInfo?.color}
+                />
+              );
+            })()}
           </div>
         )}
 

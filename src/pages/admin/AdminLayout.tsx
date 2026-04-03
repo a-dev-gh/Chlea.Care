@@ -18,6 +18,7 @@ interface NavItem {
 }
 
 const NAV_ITEMS: NavItem[] = [
+  { path: 'dashboard',     label: 'Dashboard' },
   { path: 'productos',     label: 'Productos' },
   { path: 'marcas',        label: 'Marcas' },
   { path: 'etiquetas',     label: 'Etiquetas' },
@@ -100,7 +101,12 @@ export function AdminLayout() {
             .filter(item => !item.minRole || item.minRole.includes(role as AdminRole))
             .map(item => {
               const href = getHref(item.path);
-              const isActive = pathname === href || pathname === `/${item.path}`;
+              // Dashboard item is also active when on the admin root index
+              const isDashboard = item.path === 'dashboard';
+              const isActive =
+                pathname === href ||
+                pathname === `/${item.path}` ||
+                (isDashboard && (pathname === '/' || pathname === '/admin'));
               return (
                 <Link
                   key={item.path}

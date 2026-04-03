@@ -490,6 +490,40 @@ INSERT INTO public.badges (name, emoji, sort_order) VALUES
 ON CONFLICT (name) DO NOTHING;
 
 
+-- =========================================================================
+-- 16. USER_PROFILES (customer account data)
+-- =========================================================================
+CREATE TABLE public.user_profiles (
+  id          uuid PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+  full_name   text NOT NULL DEFAULT '',
+  phone       text NOT NULL DEFAULT '',
+  avatar_url  text NOT NULL DEFAULT '',
+  addresses   jsonb NOT NULL DEFAULT '[]'::jsonb,
+  created_at  timestamptz NOT NULL DEFAULT now(),
+  updated_at  timestamptz NOT NULL DEFAULT now()
+);
+
+ALTER TABLE public.user_profiles ENABLE ROW LEVEL SECURITY;
+
+-- Users can only read/write their own profile
+CREATE POLICY "user_profiles: own select"
+  ON public.user_profiles FOR SELECT
+  USING (id = auth.uid());
+
+CREATE POLICY "user_profiles: own insert"
+  ON public.user_profiles FOR INSERT
+  WITH CHECK (id = auth.uid());
+
+CREATE POLICY "user_profiles: own update"
+  ON public.user_profiles FOR UPDATE
+  USING (id = auth.uid());
+
+-- Admins can view all profiles (for order management)
+CREATE POLICY "user_profiles: admin select"
+  ON public.user_profiles FOR SELECT
+  USING (public.is_admin());
+
+
 CREATE INDEX idx_product_reviews_product ON public.product_reviews(product_id);
 CREATE INDEX idx_product_reviews_user    ON public.product_reviews(user_id);
 CREATE INDEX idx_testimonials_approved   ON public.testimonials(is_approved);

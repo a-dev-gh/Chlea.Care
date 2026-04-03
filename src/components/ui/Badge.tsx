@@ -14,18 +14,26 @@ const BADGE_STYLES: Record<string, React.CSSProperties> = {
 interface BadgeProps {
   text?: string;
   salePercent?: number;
+  /** Custom emoji from BadgeEntry.emoji — prepended to the label */
+  emoji?: string;
+  /** Custom color from BadgeEntry.color — overrides the hardcoded style map */
+  badgeColor?: string;
   style?: React.CSSProperties;
 }
 
-export function Badge({ text, salePercent, style }: BadgeProps) {
+export function Badge({ text, salePercent, emoji, badgeColor, style }: BadgeProps) {
   if (!text && !salePercent) return null;
 
   // When salePercent is provided, always show sale label regardless of text
   const label = salePercent ? `${salePercent}% OFF` : (text || '');
-  // Use sale style for sale badge; otherwise look up by text
+  // Prepend custom emoji when provided
+  const displayLabel = emoji ? `${emoji} ${label}` : label;
+  // Use sale style for sale badge; custom color when provided; otherwise look up by text
   const badgeStyle = salePercent
     ? BADGE_STYLES['Oferta']
-    : (BADGE_STYLES[text || ''] ?? BADGE_STYLES.default);
+    : badgeColor
+      ? { background: `${badgeColor}18`, color: badgeColor }
+      : (BADGE_STYLES[text || ''] ?? BADGE_STYLES.default);
 
   return (
     <span
@@ -42,7 +50,7 @@ export function Badge({ text, salePercent, style }: BadgeProps) {
         ...style,
       }}
     >
-      {label}
+      {displayLabel}
     </span>
   );
 }

@@ -21,6 +21,7 @@ import type {
   WhatsAppOrder,
   ProductReview,
   Testimonial,
+  UserProfile,
 } from '../types/database';
 
 // ---------------------------------------------------------------------------
@@ -357,6 +358,63 @@ export async function submitTestimonial(
 
   if (error) {
     console.warn('[db] submitTestimonial failed:', error.message);
+    return false;
+  }
+
+  return true;
+}
+
+// ---------------------------------------------------------------------------
+// User Profiles
+// ---------------------------------------------------------------------------
+
+/** Fetch the current user's profile. Creates one if it doesn't exist. */
+export async function fetchUserProfile(userId: string): Promise<UserProfile | null> {
+  if (!supabase) return null;
+
+  const { data, error } = await supabase
+    .from('user_profiles')
+    .select('*')
+    .eq('id', userId)
+    .single();
+
+  if (error && error.code === 'PGRST116') {
+    // No profile row yet — create one
+    const { data: created, error: createErr } = await supabase
+      .from('user_profiles')
+      .insert({ id: userId })
+      .select()
+      .single();
+
+    if (createErr) {
+      console.warn('[db] createUserProfile failed:', createErr.message);
+      return null;
+    }
+    return created as UserProfile;
+  }
+
+  if (error) {
+    console.warn('[db] fetchUserProfile failed:', error.message);
+    return null;
+  }
+
+  return data as UserProfile;
+}
+
+/** Update the current user's profile. */
+export async function updateUserProfile(
+  userId: string,
+  updates: Partial<Pick<UserProfile, 'full_name' | 'phone' | 'avatar_url' | 'addresses'>>,
+): Promise<boolean> {
+  if (!supabase) return false;
+
+  const { error } = await supabase
+    .from('user_profiles')
+    .update({ ...updates, updated_at: new Date().toISOString() })
+    .eq('id', userId);
+
+  if (error) {
+    console.warn('[db] updateUserProfile failed:', error.message);
     return false;
   }
 

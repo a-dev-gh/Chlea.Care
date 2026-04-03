@@ -12,6 +12,7 @@ import { BrandPage } from './pages/BrandPage';
 import { AccountPage } from './pages/AccountPage';
 import { MensCatalogPage } from './pages/MensCatalogPage';
 import { AdminLayout } from './pages/admin/AdminLayout';
+import { AdminDashboard } from './pages/admin/AdminDashboard';
 import { AdminLoginPage } from './pages/admin/AdminLoginPage';
 import { AdminProductos } from './pages/admin/AdminProductos';
 import { AdminOrdenes } from './pages/admin/AdminOrdenes';
@@ -64,7 +65,8 @@ export default function App() {
         {/* Standalone login — outside AdminLayout to prevent infinite redirect */}
         <Route path="/login" element={<AdminLoginPage />} />
         <Route path="/" element={<AdminLayout />}>
-          <Route index element={<Navigate to="/productos" replace />} />
+          <Route index element={<AdminDashboard />} />
+          <Route path="dashboard" element={<AdminDashboard />} />
           <Route path="productos" element={<AdminProductos />} />
           <Route path="marcas" element={<AdminMarcas />} />
           <Route path="etiquetas" element={<AdminEtiquetas />} />
@@ -76,7 +78,7 @@ export default function App() {
           <Route path="testimonios" element={<AdminTestimonios />} />
           <Route path="configuracion" element={<AdminConfiguracion />} />
         </Route>
-        <Route path="*" element={<Navigate to="/productos" replace />} />
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     );
   }
@@ -99,7 +101,8 @@ export default function App() {
 
       {/* Admin routes (backward compatible, also for localhost testing) */}
       <Route path="/admin" element={<AdminLayout />}>
-        <Route index element={<Navigate to="/admin/productos" replace />} />
+        <Route index element={<AdminDashboard />} />
+        <Route path="dashboard"     element={<AdminDashboard />} />
         <Route path="productos"     element={<AdminProductos />} />
         <Route path="marcas"        element={<AdminMarcas />} />
         <Route path="etiquetas"     element={<AdminEtiquetas />} />
