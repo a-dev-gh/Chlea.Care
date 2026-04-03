@@ -1,25 +1,29 @@
 import { useParams, Link, Navigate } from 'react-router-dom';
 import { SEED_BLOG_POSTS } from '../data/seedBlog';
 
+// Convert legacy plain-text (with **bold** markers) to HTML if needed.
+// If the string already contains HTML tags, use it as-is.
+function bodyToHtml(text: string): string {
+  if (!text) return '';
+  // If the body already contains HTML markup from the RTE, return it directly
+  if (/<[a-z][\s\S]*>/i.test(text)) return text;
+  // Otherwise convert the old plain-text markdown-ish format
+  return text
+    .split('\n')
+    .map(line => {
+      if (line.trim() === '') return '<br>';
+      // Replace **bold** with <strong>
+      const bolded = line.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+      return `<p style="margin-bottom:8px">${bolded}</p>`;
+    })
+    .join('');
+}
+
 export function BlogPostPage() {
   const { slug } = useParams<{ slug: string }>();
   const post = SEED_BLOG_POSTS.find(p => p.slug === slug && p.is_visible);
 
   if (!post) return <Navigate to="/blog" replace />;
-
-  // Simple markdown-ish rendering (bold with **)
-  const renderBody = (text: string) => {
-    return text.split('\n').map((line, i) => {
-      // Bold text
-      const parts = line.split(/\*\*(.*?)\*\*/g);
-      const rendered = parts.map((part, j) =>
-        j % 2 === 1 ? <strong key={j}>{part}</strong> : part
-      );
-
-      if (line.trim() === '') return <br key={i} />;
-      return <p key={i} style={{ marginBottom: 8 }}>{rendered}</p>;
-    });
-  };
 
   return (
     <div style={{ maxWidth: 720, margin: '0 auto', padding: '48px 24px 80px' }}>
@@ -100,13 +104,14 @@ export function BlogPostPage() {
       </div>
 
       {/* Body */}
-      <div style={{
-        fontSize: 16, color: 'var(--text-soft)',
-        lineHeight: 1.85,
-        fontFamily: 'var(--font-body)',
-      }}>
-        {renderBody(post.body)}
-      </div>
+      <div
+        style={{
+          fontSize: 16, color: 'var(--text-soft)',
+          lineHeight: 1.85,
+          fontFamily: 'var(--font-body)',
+        }}
+        dangerouslySetInnerHTML={{ __html: bodyToHtml(post.body) }}
+      />
 
       {/* CTA */}
       <div style={{

@@ -5,6 +5,7 @@ import { Badge } from '../../components/ui/Badge';
 import { Button } from '../../components/ui/Button';
 import { Modal } from '../../components/ui/Modal';
 import { ImageUploader } from '../../components/ui/ImageUploader';
+import { RichTextEditor } from '../../components/ui/RichTextEditor';
 import { adminFetch, adminInsert, adminUpdate, adminDelete } from '../../utils/adminApi';
 import { SEED_BRANDS } from '../../data/seedData';
 import { supabase } from '../../utils/supabase';
@@ -580,12 +581,11 @@ export function AdminProductos() {
                 {/* Description */}
                 <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
                   <label style={labelStyle}>Descripción</label>
-                  <textarea
+                  <RichTextEditor
                     value={editing.description || ''}
-                    onChange={e => setEditing({ ...editing, description: e.target.value })}
-                    rows={6}
+                    onChange={desc => setEditing({ ...editing, description: desc })}
                     placeholder="Descripción del producto..."
-                    style={{ ...inputStyle, resize: 'vertical', flex: 1 }}
+                    minHeight={100}
                   />
                 </div>
 

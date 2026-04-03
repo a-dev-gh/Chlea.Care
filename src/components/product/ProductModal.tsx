@@ -275,9 +275,10 @@ export function ProductModal({ product, onClose }: ProductModalProps) {
         <h2 style={{ fontFamily: 'var(--font-display)', fontSize: 26, fontWeight: 400, color: 'var(--text)', marginBottom: 10, lineHeight: 1.2 }}>
           {product.name}
         </h2>
-        <p style={{ fontSize: 14, color: 'var(--text-soft)', lineHeight: 1.65, marginBottom: 18 }}>
-          {product.description}
-        </p>
+        <div
+          style={{ fontSize: 14, color: 'var(--text-soft)', lineHeight: 1.65, marginBottom: 18 }}
+          dangerouslySetInnerHTML={{ __html: product.description }}
+        />
 
         {/* ── Price ── */}
         <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, marginBottom: 24 }}>

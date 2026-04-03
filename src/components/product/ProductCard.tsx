@@ -7,6 +7,13 @@ import { formatPrice } from '../../utils/formatPrice';
 import { buildProductInquiry, openWhatsApp } from '../../utils/whatsapp';
 import type { DisplayProduct } from '../../types/database';
 
+// Strip HTML tags for plain-text card previews
+function stripHtml(html: string): string {
+  const tmp = document.createElement('div');
+  tmp.innerHTML = html;
+  return tmp.textContent || tmp.innerText || '';
+}
+
 interface ProductCardProps {
   product: DisplayProduct;
   isMen?: boolean;
@@ -148,7 +155,7 @@ export function ProductCard({ product, isMen = false, onOpenModal }: ProductCard
           lineHeight: 1.5, marginTop: 2,
           display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden',
         }}>
-          {product.description}
+          {stripHtml(product.description || '')}
         </p>
 
         <div style={{ marginTop: 'auto', paddingTop: 12, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>

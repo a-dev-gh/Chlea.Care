@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Button } from '../../components/ui/Button';
+import { RichTextEditor } from '../../components/ui/RichTextEditor';
 import { adminFetch, adminInsert, adminUpdate, adminDelete } from '../../utils/adminApi';
 import { showToast } from '../../components/ui/Toast';
 import { supabase } from '../../utils/supabase';
@@ -217,12 +218,12 @@ export function AdminBlog() {
               <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', letterSpacing: 1, textTransform: 'uppercase', marginBottom: 6, display: 'block' }}>
                 Contenido completo
               </label>
-              <textarea
+              <RichTextEditor
                 value={editing.body || ''}
-                onChange={e => setEditing({ ...editing, body: e.target.value })}
-                rows={12}
-                placeholder="Escribe el contenido del post... Usa **texto** para negrita."
-                style={{ ...inputStyle, resize: 'vertical', lineHeight: 1.6 }}
+                onChange={body => setEditing({ ...editing, body: body })}
+                placeholder="Contenido del artículo..."
+                minHeight={250}
+                maxHeight={500}
               />
             </div>
 
