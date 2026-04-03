@@ -8,9 +8,49 @@ interface ImageUploaderProps {
   size?: 'main' | 'gallery';
 }
 
-const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5 MB
-const ACCEPTED_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
+const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB (before conversion)
+const ACCEPTED_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/heic', 'image/heif'];
 const BUCKET = 'product-images';
+
+/**
+ * Convert any image file to WebP using Canvas.
+ * Falls back to the original file if conversion fails (e.g. HEIC on some browsers).
+ */
+async function convertToWebP(file: File, quality = 0.85): Promise<{ blob: Blob; name: string }> {
+  return new Promise((resolve) => {
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      const canvas = document.createElement('canvas');
+      canvas.width = img.naturalWidth;
+      canvas.height = img.naturalHeight;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) { resolve({ blob: file, name: file.name }); return; }
+      ctx.drawImage(img, 0, 0);
+      canvas.toBlob(
+        (blob) => {
+          if (blob) {
+            const baseName = file.name.replace(/\.[^.]+$/, '');
+            resolve({ blob, name: `${baseName}.webp` });
+          } else {
+            resolve({ blob: file, name: file.name });
+          }
+        },
+        'image/webp',
+        quality,
+      );
+    };
+
+    img.onerror = () => {
+      URL.revokeObjectURL(url);
+      resolve({ blob: file, name: file.name });
+    };
+
+    img.src = url;
+  });
+}
 
 export function ImageUploader({ onUpload, currentUrl, size = 'main' }: ImageUploaderProps) {
   const [uploading, setUploading] = useState(false);
@@ -28,22 +68,25 @@ export function ImageUploader({ onUpload, currentUrl, size = 'main' }: ImageUplo
     }
 
     if (!ACCEPTED_TYPES.includes(file.type)) {
-      showToast('Formato no válido. Usa JPG, PNG o WebP.', 'error');
+      showToast('Formato no válido. Usa JPG, PNG, WebP o HEIC.', 'error');
       return;
     }
 
     if (file.size > MAX_FILE_SIZE) {
-      showToast('La imagen supera los 5 MB máximos.', 'error');
+      showToast('La imagen supera los 10 MB máximos.', 'error');
       return;
     }
 
     setUploading(true);
 
-    const path = `products/${Date.now()}-${file.name.replace(/\s+/g, '_')}`;
+    // Convert to WebP automatically
+    const { blob, name } = await convertToWebP(file);
+
+    const path = `products/${Date.now()}-${name.replace(/\s+/g, '_')}`;
 
     const { error: uploadError } = await supabase.storage
       .from(BUCKET)
-      .upload(path, file, { cacheControl: '3600', upsert: false });
+      .upload(path, blob, { contentType: 'image/webp', cacheControl: '3600', upsert: false });
 
     if (uploadError) {
       const bucketMissing =
@@ -114,7 +157,7 @@ export function ImageUploader({ onUpload, currentUrl, size = 'main' }: ImageUplo
       <input
         ref={inputRef}
         type="file"
-        accept={ACCEPTED_TYPES.join(',')}
+        accept="image/jpeg,image/png,image/webp,image/heic,image/heif,.heic,.heif"
         onChange={handleInputChange}
         style={{ display: 'none' }}
         aria-label="Seleccionar imagen"
@@ -174,7 +217,7 @@ export function ImageUploader({ onUpload, currentUrl, size = 'main' }: ImageUplo
             <span style={{ fontSize: 12, color: 'var(--text-muted)', textAlign: 'center', lineHeight: 1.4 }}>
               Subir imagen
               <br />
-              <span style={{ fontSize: 10, opacity: 0.7 }}>o arrastra aquí · JPG, PNG, WebP · máx 5 MB</span>
+              <span style={{ fontSize: 10, opacity: 0.7 }}>o arrastra aquí · se convierte a WebP automáticamente</span>
             </span>
           </>
         )}
