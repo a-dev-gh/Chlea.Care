@@ -58,15 +58,19 @@ export function TopNav() {
   const [brandsCategoryTab, setBrandsCategoryTab] = useState('');
   const BRANDS_PER_PAGE = 5;
 
-  // Categories that actually have brands with products
-  const catsWithBrands = getCategoriesWithBrands(allProducts);
-  const brandCatTabs = SEED_CATEGORIES.filter(c => catsWithBrands.includes(c.slug));
+  // Brand category mapping for hamburger menu — show ALL brands, not just those with products
+  const BRAND_CAT_MAP: Record<string, string> = { hair: 'cabello', skincare: 'skincare', accessories: 'accesorios', mens: 'hombres' };
+  const brandCatTabs = SEED_CATEGORIES.filter(c => allBrands.some(b => {
+    const cats = b.categories || [b.category];
+    return cats.some((bc: string) => BRAND_CAT_MAP[bc] === c.slug || bc === c.slug);
+  }));
 
   // Auto-select first available tab
   const activeBrandTab = brandsCategoryTab || (brandCatTabs[0]?.slug || '');
-  const brandsInTab = activeBrandTab
-    ? getBrandsForCategory(activeBrandTab, allProducts, allBrands).filter(b => b.logo_url)
-    : [];
+  const brandsInTab = allBrands.filter(b => {
+    const cats = b.categories || [b.category];
+    return cats.some((bc: string) => BRAND_CAT_MAP[bc] === activeBrandTab || bc === activeBrandTab);
+  });
   const totalBrandPages = Math.ceil(brandsInTab.length / BRANDS_PER_PAGE);
   const visibleBrands = brandsInTab.slice(brandsPage * BRANDS_PER_PAGE, (brandsPage + 1) * BRANDS_PER_PAGE);
   const navigate = useNavigate();

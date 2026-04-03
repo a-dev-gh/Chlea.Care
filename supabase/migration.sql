@@ -394,6 +394,10 @@ ALTER TABLE public.products
   ADD COLUMN IF NOT EXISTS is_in_stock  boolean NOT NULL DEFAULT true,
   ADD COLUMN IF NOT EXISTS is_by_request boolean NOT NULL DEFAULT false;
 
+-- Brand multi-category support
+ALTER TABLE public.brands
+  ADD COLUMN IF NOT EXISTS categories jsonb NOT NULL DEFAULT '[]'::jsonb;
+
 
 -- =========================================================================
 -- 13. PRODUCT_REVIEWS (per-product, requires login)

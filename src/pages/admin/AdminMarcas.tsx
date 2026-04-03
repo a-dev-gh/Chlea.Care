@@ -49,6 +49,7 @@ interface EditBrand {
   logo_url: string;
   is_premier: boolean;
   category: BrandCategory;
+  categories: BrandCategory[];
 }
 
 export function AdminMarcas() {
@@ -69,7 +70,7 @@ export function AdminMarcas() {
   useEffect(() => { loadBrands(); }, [loadBrands]);
 
   function openNew() {
-    setEditing({ name: '', slug: '', tagline: '', logo_url: '', is_premier: false, category: 'hair' });
+    setEditing({ name: '', slug: '', tagline: '', logo_url: '', is_premier: false, category: 'hair', categories: ['hair'] });
     setIsNew(true);
   }
 
@@ -82,6 +83,7 @@ export function AdminMarcas() {
       logo_url: brand.logo_url,
       is_premier: brand.is_premier,
       category: brand.category,
+      categories: brand.categories || [brand.category],
     });
     setIsNew(false);
   }
@@ -202,7 +204,9 @@ export function AdminMarcas() {
                   /marcas/{b.slug}
                 </td>
                 <td style={{ padding: '14px 16px', fontSize: 13, color: 'var(--text-soft)', textTransform: 'capitalize' }}>
-                  {BRAND_CATEGORIES.find(c => c.value === b.category)?.label ?? b.category}
+                  {(b.categories && b.categories.length > 0
+                    ? b.categories.map(c => BRAND_CATEGORIES.find(bc => bc.value === c)?.label ?? c).join(', ')
+                    : BRAND_CATEGORIES.find(c => c.value === b.category)?.label ?? b.category)}
                 </td>
                 <td style={{ padding: '14px 16px' }}>
                   <span style={{
@@ -305,16 +309,31 @@ export function AdminMarcas() {
                 />
               </div>
               <div>
-                <label style={labelStyle}>Categoria</label>
-                <select
-                  value={editing.category}
-                  onChange={e => setEditing({ ...editing, category: e.target.value as BrandCategory })}
-                  style={{ ...inputStyle, cursor: 'pointer' }}
-                >
-                  {BRAND_CATEGORIES.map(c => (
-                    <option key={c.value} value={c.value}>{c.label}</option>
-                  ))}
-                </select>
+                <label style={labelStyle}>Categorías</label>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12 }}>
+                  {BRAND_CATEGORIES.map(c => {
+                    const cats = editing.categories || [editing.category];
+                    const checked = cats.includes(c.value);
+                    return (
+                      <label key={c.value} style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', fontSize: 14, color: 'var(--text-soft)' }}>
+                        <input
+                          type="checkbox"
+                          checked={checked}
+                          onChange={() => {
+                            const updated = checked
+                              ? cats.filter(v => v !== c.value)
+                              : [...cats, c.value];
+                            // Keep at least one category selected
+                            if (updated.length === 0) return;
+                            setEditing({ ...editing, categories: updated as BrandCategory[], category: updated[0] as BrandCategory });
+                          }}
+                          style={{ accentColor: 'var(--hot)', width: 16, height: 16 }}
+                        />
+                        {c.label}
+                      </label>
+                    );
+                  })}
+                </div>
               </div>
               <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', fontSize: 14, color: 'var(--text-soft)' }}>
                 <input

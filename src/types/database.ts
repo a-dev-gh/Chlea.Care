@@ -70,6 +70,8 @@ export interface Brand {
   /** Only the first 6 premier brands are shown in the footer carousel. */
   is_premier: boolean;
   category: BrandCategory;
+  /** Multiple categories this brand belongs to (overrides single category when present). */
+  categories?: BrandCategory[];
   created_at: string;
 }
 
