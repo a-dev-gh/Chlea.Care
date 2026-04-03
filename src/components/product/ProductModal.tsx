@@ -117,11 +117,18 @@ export function ProductModal({ product, onClose }: ProductModalProps) {
     }
   }
 
-  // Multi-image state
+  // Multi-image state — combine main image + gallery, deduplicated
   const allImages: string[] = product
-    ? (product.image_urls && product.image_urls.length > 0
-        ? product.image_urls
-        : product.image_url ? [product.image_url] : [])
+    ? (() => {
+        const imgs: string[] = [];
+        if (product.image_url) imgs.push(product.image_url);
+        if (product.image_urls) {
+          for (const url of product.image_urls) {
+            if (url && !imgs.includes(url)) imgs.push(url);
+          }
+        }
+        return imgs;
+      })()
     : [];
   const [selectedIdx, setSelectedIdx] = useState(0);
 
