@@ -7,7 +7,7 @@ import { Modal } from '../../components/ui/Modal';
 import { adminFetch, adminInsert, adminUpdate, adminDelete } from '../../utils/adminApi';
 import { SEED_BRANDS } from '../../data/seedData';
 import { supabase } from '../../utils/supabase';
-import type { Product, Brand, LabelGroup } from '../../types/database';
+import type { Product, Brand, LabelGroup, BadgeEntry } from '../../types/database';
 
 function seedToBrands(): Brand[] {
   return SEED_BRANDS.map((b, i) => ({
@@ -29,17 +29,7 @@ const CATEGORIES = [
   { value: 'hombres', label: 'Hombres' },
 ];
 
-// Badge options — non-technical friendly dropdown
-const BADGE_OPTIONS = [
-  { value: '',              label: 'Sin badge' },
-  { value: 'Nuevo',        label: '✦ Nuevo' },
-  { value: 'Bestseller',   label: '🏆 Bestseller' },
-  { value: 'Oferta',       label: '🔥 Oferta' },
-  { value: 'Vegano',       label: '🌿 Vegano' },
-  { value: 'Sin Crueldad', label: '🐰 Sin Crueldad' },
-  { value: 'Top Rated',    label: '⭐ Top Rated' },
-  { value: 'Viral',        label: '🔥 Viral' },
-];
+// Badge options are now loaded from the DB (badges table)
 
 const EMPTY_PRODUCT: Partial<Product> = {
   name: '',
@@ -98,6 +88,7 @@ export function AdminProductos() {
   const [products, setProducts] = useState<Product[]>([]);
   const [brands, setBrands] = useState<Brand[]>([]);
   const [labelGroups, setLabelGroups] = useState<LabelGroup[]>([]);
+  const [badges, setBadges] = useState<BadgeEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState<Partial<Product> | null>(null);
   const [isNew, setIsNew] = useState(false);
@@ -113,14 +104,16 @@ export function AdminProductos() {
   // Fetch products, brands, and label groups
   const loadData = useCallback(async () => {
     setLoading(true);
-    const [prods, brnds, groups] = await Promise.all([
+    const [prods, brnds, groups, bdgs] = await Promise.all([
       adminFetch<Product>('products', { orderBy: 'created_at', ascending: false }),
       adminFetch<Brand>('brands', { orderBy: 'name' }),
       adminFetch<LabelGroup>('label_groups', { orderBy: 'sort_order' }),
+      adminFetch<BadgeEntry>('badges', { orderBy: 'sort_order' }),
     ]);
     setProducts(prods);
     setBrands(brnds.length > 0 ? brnds : seedToBrands());
     setLabelGroups(groups);
+    setBadges(bdgs);
     setLoading(false);
   }, []);
 
@@ -576,8 +569,9 @@ export function AdminProductos() {
                     onChange={e => setEditing({ ...editing, badge: e.target.value })}
                     style={{ ...inputStyle, cursor: 'pointer' }}
                   >
-                    {BADGE_OPTIONS.map(opt => (
-                      <option key={opt.value} value={opt.value}>{opt.label}</option>
+                    <option value="">Sin badge</option>
+                    {badges.map(b => (
+                      <option key={b.id} value={b.name}>{b.emoji} {b.name}</option>
                     ))}
                   </select>
                 </div>
@@ -720,45 +714,58 @@ export function AdminProductos() {
                       No hay etiquetas creadas. Ve a <strong>Etiquetas</strong> para crear grupos.
                     </p>
                   ) : (
-                    <div style={{
-                      border: '1.5px solid var(--border2)', borderRadius: 'var(--r-sm)',
-                      padding: '12px 14px', display: 'flex', flexDirection: 'column', gap: 14,
-                      background: 'var(--white)',
-                    }}>
-                      {labelGroups.map(group => (
-                        <div key={group.id}>
-                          {/* Group name header */}
-                          <p style={{
-                            fontSize: 12, fontWeight: 700, color: 'var(--deep)',
-                            textTransform: 'uppercase', letterSpacing: 0.8,
-                            marginBottom: 8,
-                          }}>
-                            {group.name}
-                          </p>
-                          {/* Checkbox grid for group values */}
-                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px 16px' }}>
-                            {group.values.map(val => (
-                              <label
-                                key={val}
-                                style={{
-                                  display: 'flex', alignItems: 'center', gap: 6,
-                                  cursor: 'pointer', fontSize: 13, color: 'var(--text-soft)',
-                                  userSelect: 'none',
-                                }}
-                              >
-                                <input
-                                  type="checkbox"
-                                  checked={isLabelChecked(group.name, val)}
-                                  onChange={() => toggleLabel(group.name, val)}
-                                  style={{ accentColor: 'var(--hot)', width: 15, height: 15 }}
-                                />
-                                {val}
-                              </label>
-                            ))}
-                          </div>
+                    <>
+                      {/* Show group count when there are many groups */}
+                      {labelGroups.length > 3 && (
+                        <p style={{
+                          fontSize: 12, color: 'var(--text-muted)', marginBottom: 6,
+                          fontStyle: 'italic',
+                        }}>
+                          {labelGroups.length} grupos de etiquetas
+                        </p>
+                      )}
+                      <div style={{
+                        border: '1.5px solid var(--border2)', borderRadius: 'var(--r-sm)',
+                        background: 'var(--white)',
+                      }}>
+                        {/* Scroll container — limits height when there are many label groups */}
+                        <div style={{ maxHeight: 280, overflowY: 'auto', borderRadius: 'var(--r-sm)', padding: '12px 14px', display: 'flex', flexDirection: 'column', gap: 14 }}>
+                          {labelGroups.map(group => (
+                            <div key={group.id}>
+                              {/* Group name header */}
+                              <p style={{
+                                fontSize: 12, fontWeight: 700, color: 'var(--deep)',
+                                textTransform: 'uppercase', letterSpacing: 0.8,
+                                marginBottom: 8,
+                              }}>
+                                {group.name}
+                              </p>
+                              {/* Checkbox grid for group values */}
+                              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px 16px' }}>
+                                {group.values.map(val => (
+                                  <label
+                                    key={val}
+                                    style={{
+                                      display: 'flex', alignItems: 'center', gap: 6,
+                                      cursor: 'pointer', fontSize: 13, color: 'var(--text-soft)',
+                                      userSelect: 'none',
+                                    }}
+                                  >
+                                    <input
+                                      type="checkbox"
+                                      checked={isLabelChecked(group.name, val)}
+                                      onChange={() => toggleLabel(group.name, val)}
+                                      style={{ accentColor: 'var(--hot)', width: 15, height: 15 }}
+                                    />
+                                    {val}
+                                  </label>
+                                ))}
+                              </div>
+                            </div>
+                          ))}
                         </div>
-                      ))}
-                    </div>
+                      </div>
+                    </>
                   )}
                 </div>
 

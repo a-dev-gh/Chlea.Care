@@ -4,12 +4,9 @@ import { adminFetch, adminDeleteWhere, adminBulkInsert, adminUpsertSettings } fr
 import { SEED_NAV_DROPDOWNS } from '../../data/seedData';
 import { supabase } from '../../utils/supabase';
 import { fetchSettings } from '../../utils/db';
-import type { NavDropdown } from '../../types/database';
+import type { NavDropdown, LabelGroup, BadgeEntry } from '../../types/database';
 
 const MAX_ITEMS = 5;
-
-// Badge options for the promo slot badge picker
-const BADGE_OPTIONS = ['Vegano', 'Sin Crueldad', 'Nuevo', 'Bestseller', 'Top Rated', 'Viral'];
 
 // Filter type options for the promo nav slot
 type PromoFilterType = 'ofertas' | 'badge' | 'custom';
@@ -48,10 +45,16 @@ export function AdminNavegacion() {
   const [promoName, setPromoName]           = useState('');
   const [promoEmoji, setPromoEmoji]         = useState('');
   const [promoFilterType, setPromoFilterType] = useState<PromoFilterType>('ofertas');
-  const [promoBadge, setPromoBadge]         = useState(BADGE_OPTIONS[0]);
+  const [promoBadge, setPromoBadge]         = useState('');
   const [promoCustomUrl, setPromoCustomUrl] = useState('');
   const [promoSaving, setPromoSaving]       = useState(false);
   const [promoFeedback, setPromoFeedback]   = useState('');
+
+  // Label groups and DB badges for the nav label picker
+  const [labelGroups, setLabelGroups]       = useState<LabelGroup[]>([]);
+  const [dbBadges, setDbBadges]             = useState<BadgeEntry[]>([]);
+  // Which category's label picker panel is open (null = closed)
+  const [labelPickerCat, setLabelPickerCat] = useState<string | null>(null);
 
   // Compute the resulting href from current promo fields
   function computePromoHref(): string {
@@ -63,8 +66,13 @@ export function AdminNavegacion() {
   const loadDropdowns = useCallback(async () => {
     setLoading(true);
 
-    // Load nav dropdowns
-    const data = await adminFetch<NavDropdown>('nav_dropdowns', { orderBy: 'sort_order' });
+    // Load nav dropdowns, label groups, and DB badges in parallel
+    const [data, groups, bdgs] = await Promise.all([
+      adminFetch<NavDropdown>('nav_dropdowns', { orderBy: 'sort_order' }),
+      adminFetch<LabelGroup>('label_groups', { orderBy: 'sort_order' }),
+      adminFetch<BadgeEntry>('badges', { orderBy: 'sort_order' }),
+    ]);
+
     if (data.length > 0) {
       const grouped: Record<string, NavDropdown[]> = {};
       for (const row of data) {
@@ -75,6 +83,9 @@ export function AdminNavegacion() {
     } else {
       setDropdowns(seedToGrouped());
     }
+
+    setLabelGroups(groups);
+    setDbBadges(bdgs);
 
     // Load existing promo nav settings
     const settings = await fetchSettings();
@@ -143,6 +154,42 @@ export function AdminNavegacion() {
       next[cat] = arr;
       return next;
     });
+  }
+
+  // Check whether a label value is already in a category's dropdown items
+  function isLabelValueAdded(cat: string, groupName: string, value: string): boolean {
+    const href = `/catalogo?label=${encodeURIComponent(groupName)}:${encodeURIComponent(value)}`;
+    return (dropdowns[cat] ?? []).some(item => item.href === href);
+  }
+
+  // Toggle a label value in/out of a category's dropdown items
+  function toggleLabelNavItem(cat: string, groupName: string, value: string) {
+    const href = `/catalogo?label=${encodeURIComponent(groupName)}:${encodeURIComponent(value)}`;
+    const existing = dropdowns[cat] ?? [];
+    const alreadyAdded = existing.some(item => item.href === href);
+
+    if (alreadyAdded) {
+      // Remove this item
+      setDropdowns(prev => ({
+        ...prev,
+        [cat]: prev[cat].filter(item => item.href !== href),
+      }));
+    } else {
+      // Add — but respect max items limit
+      if (existing.length >= MAX_ITEMS) return;
+      setDropdowns(prev => {
+        const next = { ...prev };
+        if (!next[cat]) next[cat] = [];
+        next[cat] = [...next[cat], {
+          id: `new-${Date.now()}-${value}`,
+          category_slug: cat,
+          label: value,
+          href,
+          sort_order: next[cat].length,
+        }];
+        return next;
+      });
+    }
   }
 
   async function handlePromoSave() {
@@ -312,7 +359,7 @@ export function AdminNavegacion() {
                 background: 'var(--white)', outline: 'none', cursor: 'pointer',
               }}
             >
-              {BADGE_OPTIONS.map(b => <option key={b} value={b}>{b}</option>)}
+              {dbBadges.map(b => <option key={b.id} value={b.name}>{b.emoji} {b.name}</option>)}
             </select>
           </div>
         )}
@@ -524,6 +571,80 @@ export function AdminNavegacion() {
               </button>
             </div>
           ))}
+
+          {/* ── "Agregar desde etiquetas" button — opens label picker panel ── */}
+          {labelGroups.length > 0 && (
+            <button
+              onClick={() => setLabelPickerCat(labelPickerCat === editingCategory ? null : editingCategory)}
+              style={{
+                background: 'none', border: '1px dashed var(--hot)', color: 'var(--hot)',
+                borderRadius: 'var(--r-sm)', padding: '6px 14px', fontSize: 12,
+                fontWeight: 600, cursor: 'pointer', fontFamily: 'var(--font-body)',
+                marginTop: 8,
+              }}
+            >
+              + Agregar desde etiquetas
+            </button>
+          )}
+
+          {/* Label picker panel — shown when the button above is clicked */}
+          {labelPickerCat === editingCategory && (
+            <div style={{
+              marginTop: 12,
+              background: 'var(--cream)',
+              border: '1px solid var(--border)',
+              borderRadius: 'var(--r-sm)',
+              padding: 12,
+            }}>
+              <p style={{
+                fontSize: 11, fontWeight: 700, color: 'var(--text-muted)',
+                letterSpacing: 1, textTransform: 'uppercase', marginBottom: 12,
+              }}>
+                Seleccionar desde etiquetas
+              </p>
+              {labelGroups.map(group => (
+                <div key={group.id} style={{ marginBottom: 14 }}>
+                  {/* Group name */}
+                  <p style={{
+                    fontSize: 12, fontWeight: 700, color: 'var(--deep)',
+                    textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 8,
+                  }}>
+                    {group.name}
+                  </p>
+                  {/* Checkboxes for each label value */}
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px 20px' }}>
+                    {group.values.map(value => {
+                      const checked = isLabelValueAdded(editingCategory, group.name, value);
+                      const atMax = (dropdowns[editingCategory]?.length ?? 0) >= MAX_ITEMS;
+                      return (
+                        <label key={value} style={{
+                          display: 'flex', alignItems: 'center', gap: 6,
+                          cursor: checked || !atMax ? 'pointer' : 'not-allowed',
+                          fontSize: 13,
+                          color: checked ? 'var(--hot)' : atMax && !checked ? 'var(--text-muted)' : 'var(--text-soft)',
+                          userSelect: 'none',
+                        }}>
+                          <input
+                            type="checkbox"
+                            checked={checked}
+                            disabled={atMax && !checked}
+                            onChange={() => toggleLabelNavItem(editingCategory, group.name, value)}
+                            style={{ accentColor: 'var(--hot)', width: 15, height: 15 }}
+                          />
+                          {value}
+                        </label>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))}
+              {(dropdowns[editingCategory]?.length ?? 0) >= MAX_ITEMS && (
+                <p style={{ fontSize: 12, color: 'var(--text-muted)', fontStyle: 'italic', marginTop: 4 }}>
+                  Límite de {MAX_ITEMS} elementos alcanzado.
+                </p>
+              )}
+            </div>
+          )}
         </div>
       )}
 

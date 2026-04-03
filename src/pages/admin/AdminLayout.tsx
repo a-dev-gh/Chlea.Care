@@ -21,6 +21,7 @@ const NAV_ITEMS: NavItem[] = [
   { path: 'productos',     label: 'Productos' },
   { path: 'marcas',        label: 'Marcas' },
   { path: 'etiquetas',     label: 'Etiquetas' },
+  { path: 'badges',        label: 'Badges' },
   { path: 'ordenes',       label: 'Órdenes' },
   { path: 'social',        label: 'Redes Sociales' },
   { path: 'blog',          label: 'Blog' },

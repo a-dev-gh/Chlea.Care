@@ -36,8 +36,9 @@ export function CatalogPage() {
   const [selectedLabels, setSelectedLabels] = useState<Record<string, string[]>>({});
   const [catalogSearch, setCatalogSearch] = useState(params.get('q') || '');
 
-  const category  = params.get('categoria') || 'todos';
-  const searchQ   = params.get('q') || '';
+  const category   = params.get('categoria') || 'todos';
+  const searchQ    = params.get('q') || '';
+  const labelParam = params.get('label');
 
   // Only women's products in main catalog — men's is separate page
   const womenCategories = SEED_CATEGORIES.filter(c => !c.is_men);
@@ -60,13 +61,25 @@ export function CatalogPage() {
     return pills;
   }, [allProducts]);
 
-  // On mount: pre-activate pills from URL params so promo nav deep-links work
+  // On mount: pre-activate pills and label filters from URL params so promo nav deep-links work
   useEffect(() => {
     const oferta = params.get('oferta');
     const badge  = params.get('badge');
+    const label  = params.get('label');
 
     if (oferta === 'true') setActivePills(prev => [...new Set([...prev, 'ofertas'])]);
     if (badge)             setActivePills(prev => [...new Set([...prev, badge.toLowerCase().replace(/\s+/g, '-')])]);
+
+    // Pre-select label filter when navigating from a nav dropdown with ?label=GroupName:Value
+    if (label) {
+      const [group, value] = label.split(':');
+      if (group && value) {
+        setSelectedLabels(prev => ({
+          ...prev,
+          [decodeURIComponent(group)]: [decodeURIComponent(value)],
+        }));
+      }
+    }
   // Run only once on mount — intentionally omitting params from deps
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);

@@ -193,6 +193,16 @@ export interface Testimonial {
   created_at: string;
 }
 
+/** An admin-managed badge (e.g. "Bestseller 🏆"). */
+export interface BadgeEntry {
+  id: string;
+  name: string;
+  emoji: string;
+  color: string;
+  sort_order: number;
+  created_at: string;
+}
+
 /** A label group for catalog filters (e.g. "Tipo de Cabello" with values ["Rizado", "Lacio"]). */
 export interface LabelGroup {
   id: string;
@@ -247,7 +257,8 @@ export type TableName =
   | 'whatsapp_orders'
   | 'label_groups'
   | 'product_reviews'
-  | 'testimonials';
+  | 'testimonials'
+  | 'badges';
 
 /**
  * Typed map of all known site-setting keys.

@@ -465,6 +465,31 @@ CREATE POLICY "testimonials: admin delete"
 -- =========================================================================
 -- INDEXES (optional but recommended)
 -- =========================================================================
+-- =========================================================================
+-- 15. BADGES (admin-managed, used in product form dropdown)
+-- =========================================================================
+CREATE TABLE public.badges (
+  id         uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  name       text NOT NULL UNIQUE,
+  emoji      text NOT NULL DEFAULT '',
+  color      text NOT NULL DEFAULT '#EB1982',
+  sort_order integer NOT NULL DEFAULT 0,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+
+ALTER TABLE public.badges ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "badges: public read" ON public.badges FOR SELECT USING (true);
+CREATE POLICY "badges: admin insert" ON public.badges FOR INSERT WITH CHECK (public.is_admin());
+CREATE POLICY "badges: admin update" ON public.badges FOR UPDATE USING (public.is_admin());
+CREATE POLICY "badges: admin delete" ON public.badges FOR DELETE USING (public.is_admin());
+
+INSERT INTO public.badges (name, emoji, sort_order) VALUES
+  ('Nuevo', '✦', 1), ('Bestseller', '🏆', 2), ('Oferta', '🔥', 3),
+  ('Vegano', '🌿', 4), ('Sin Crueldad', '🐰', 5), ('Top Rated', '⭐', 6), ('Viral', '🔥', 7)
+ON CONFLICT (name) DO NOTHING;
+
+
 CREATE INDEX idx_product_reviews_product ON public.product_reviews(product_id);
 CREATE INDEX idx_product_reviews_user    ON public.product_reviews(user_id);
 CREATE INDEX idx_testimonials_approved   ON public.testimonials(is_approved);

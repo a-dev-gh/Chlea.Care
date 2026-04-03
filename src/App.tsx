@@ -21,6 +21,7 @@ import { AdminSocial } from './pages/admin/AdminSocial';
 import { AdminNavegacion } from './pages/admin/AdminNavegacion';
 import { AdminBlog } from './pages/admin/AdminBlog';
 import { AdminEtiquetas } from './pages/admin/AdminEtiquetas';
+import { AdminBadges } from './pages/admin/AdminBadges';
 import { AdminTestimonios } from './pages/admin/AdminTestimonios';
 import { BlogPage } from './pages/BlogPage';
 import { BlogPostPage } from './pages/BlogPostPage';
@@ -67,6 +68,7 @@ export default function App() {
           <Route path="productos" element={<AdminProductos />} />
           <Route path="marcas" element={<AdminMarcas />} />
           <Route path="etiquetas" element={<AdminEtiquetas />} />
+          <Route path="badges" element={<AdminBadges />} />
           <Route path="ordenes" element={<AdminOrdenes />} />
           <Route path="social" element={<AdminSocial />} />
           <Route path="navegacion" element={<AdminNavegacion />} />
@@ -101,6 +103,7 @@ export default function App() {
         <Route path="productos"     element={<AdminProductos />} />
         <Route path="marcas"        element={<AdminMarcas />} />
         <Route path="etiquetas"     element={<AdminEtiquetas />} />
+        <Route path="badges"        element={<AdminBadges />} />
         <Route path="ordenes"       element={<AdminOrdenes />} />
         <Route path="social"        element={<AdminSocial />} />
         <Route path="navegacion"   element={<AdminNavegacion />} />
