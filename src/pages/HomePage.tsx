@@ -461,10 +461,12 @@ export function HomePage() {
             width: 100% !important;
             min-width: unset !important;
             border-radius: 0 !important;
-            padding: 40px 24px !important;
-            background: rgba(255,255,255,0.55) !important;
-            backdrop-filter: blur(16px) !important;
-            -webkit-backdrop-filter: blur(16px) !important;
+            padding: 48px 20px !important;
+            background: rgba(255,255,255,0.35) !important;
+            backdrop-filter: blur(4px) !important;
+            -webkit-backdrop-filter: blur(4px) !important;
+            box-shadow: none !important;
+            border: none !important;
           }
         }
       `}</style>
