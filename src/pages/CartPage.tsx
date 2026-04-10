@@ -56,6 +56,7 @@ export function CartPage() {
   const [errors, setErrors] = useState<string[]>([]);
   const [sending, setSending] = useState(false);
   const [showConfirmation, setShowConfirmation] = useState(false);
+  const [confirmedOrderNum, setConfirmedOrderNum] = useState<number | undefined>();
   const [savedAddresses, setSavedAddresses] = useState<UserAddress[]>([]);
 
   // Auto-fill from profile when logged in
@@ -167,6 +168,7 @@ export function CartPage() {
 
     openWhatsApp(buildCheckoutMessage(orderNum));
     clearCart();
+    setConfirmedOrderNum(orderNum);
     setShowConfirmation(true);
     setSending(false);
   }
@@ -187,6 +189,14 @@ export function CartPage() {
           </svg>
         </div>
         <h2 style={styles.emptyTitle}>Pedido Confirmado</h2>
+        {confirmedOrderNum && (
+          <p style={{
+            fontSize: 20, fontWeight: 700, color: 'var(--hot)',
+            fontFamily: 'monospace', marginBottom: 8,
+          }}>
+            Orden #{String(confirmedOrderNum).padStart(4, '0')}
+          </p>
+        )}
         <p style={styles.emptyText}>
           Tu pedido ha sido confirmado y será procesado en un plazo de 24 horas.
         </p>
