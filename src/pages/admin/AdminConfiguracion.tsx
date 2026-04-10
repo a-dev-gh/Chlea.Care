@@ -12,6 +12,13 @@ const FIELDS = [
   { key: 'about_text',     label: 'Texto "Sobre Nosotros"' },
 ];
 
+// "Sobre Nosotras" page fields
+const ABOUT_FIELDS = [
+  { key: 'about_title',    label: 'Titulo de la pagina' },
+  { key: 'about_subtitle', label: 'Subtitulo (encabezado pequeño)' },
+  { key: 'about_extra',    label: 'Texto adicional (seccion extra)' },
+];
+
 // Policy page textarea fields
 const POLICY_FIELDS = [
   { key: 'politicas_envio',     label: 'Politicas de Envio' },
@@ -96,6 +103,53 @@ export function AdminConfiguracion() {
             )}
           </div>
         ))}
+
+        {/* Sobre Nosotras page section */}
+        <div style={{ marginTop: 16 }}>
+          <h2 style={{
+            fontFamily: 'var(--font-display)', fontSize: 20, fontWeight: 400,
+            color: 'var(--hot)', marginBottom: 20, paddingTop: 16,
+            borderTop: '1.5px solid var(--border2)',
+          }}>
+            Pagina "Sobre Nosotras"
+          </h2>
+          <p style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 20, lineHeight: 1.5 }}>
+            El texto principal ya se edita arriba ("Texto Sobre Nosotros"). Aqui puedes editar el titulo, subtitulo, y contenido extra.
+          </p>
+
+          {ABOUT_FIELDS.map(field => (
+            <div key={field.key} style={{ marginBottom: 20 }}>
+              <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--text-muted)', marginBottom: 6, textTransform: 'uppercase', letterSpacing: 1 }}>
+                {field.label}
+              </label>
+              {field.key === 'about_extra' ? (
+                <textarea
+                  value={values[field.key] || ''}
+                  onChange={e => setValues(v => ({ ...v, [field.key]: e.target.value }))}
+                  rows={5}
+                  placeholder="Usa **texto** para negritas y doble salto de linea para parrafos"
+                  style={{
+                    width: '100%', padding: '12px 14px',
+                    border: '1.5px solid var(--border2)', borderRadius: 'var(--r-sm)',
+                    fontSize: 14, fontFamily: 'var(--font-body)', color: 'var(--text)',
+                    resize: 'vertical', outline: 'none',
+                  }}
+                />
+              ) : (
+                <input
+                  type="text"
+                  value={values[field.key] || ''}
+                  onChange={e => setValues(v => ({ ...v, [field.key]: e.target.value }))}
+                  style={{
+                    width: '100%', padding: '12px 14px',
+                    border: '1.5px solid var(--border2)', borderRadius: 'var(--r-sm)',
+                    fontSize: 14, fontFamily: 'var(--font-body)', color: 'var(--text)', outline: 'none',
+                  }}
+                />
+              )}
+            </div>
+          ))}
+        </div>
 
         {/* Policy pages section */}
         <div style={{ marginTop: 16 }}>

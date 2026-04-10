@@ -321,4 +321,10 @@ export interface SiteSettings {
   promo_nav_href?: string;
   /** Promotional nav slot — emoji icon for the pill. */
   promo_nav_emoji?: string;
+  /** "Sobre Nosotras" page title. */
+  about_title?: string;
+  /** "Sobre Nosotras" page subtitle/header. */
+  about_subtitle?: string;
+  /** "Sobre Nosotras" extra content section. */
+  about_extra?: string;
 }

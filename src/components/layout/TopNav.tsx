@@ -17,10 +17,12 @@ const SEARCH_CATEGORIES = [
 
 const MENU_LINKS = [
   { label: 'Inicio', href: '/' },
-  { label: 'Blog', href: '/blog' },
   { label: 'Catálogo', href: '/catalogo' },
   { label: 'Marcas', href: '/marcas', expandable: true },
+  { label: 'Tipos de Productos', href: '/catalogo', expandable: 'categories' as const },
   { label: 'Hombres', href: '/hombres' },
+  { label: 'Blog', href: '/blog' },
+  { label: 'Sobre Nosotras', href: '/sobre-nosotras' },
 ];
 
 export function TopNav() {
@@ -52,6 +54,7 @@ export function TopNav() {
   }).filter(g => g.values.length > 0);
   const [menuOpen, setMenuOpen] = useState(false);
   const [brandsExpanded, setBrandsExpanded] = useState(false);
+  const [categoriesExpanded, setCategoriesExpanded] = useState(false);
   const [brandsPage, setBrandsPage] = useState(0);
   const [brandsCategoryTab, setBrandsCategoryTab] = useState('');
   const BRANDS_PER_PAGE = 5;
@@ -483,7 +486,49 @@ export function TopNav() {
             <div style={{ flex: 1, overflowY: 'auto', padding: '12px 0' }}>
               {MENU_LINKS.map(link => (
                 <div key={link.label}>
-                  {link.expandable ? (
+                  {link.expandable === 'categories' ? (
+                    /* Expandable Product Types section */
+                    <>
+                      <button
+                        onClick={() => setCategoriesExpanded(!categoriesExpanded)}
+                        className="menu-link"
+                        style={{
+                          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                          width: '100%', padding: '16px 32px',
+                          fontSize: 16, fontWeight: 500, color: 'var(--text)',
+                          fontFamily: 'var(--font-body)', background: 'none', border: 'none',
+                          cursor: 'pointer', textAlign: 'left', position: 'relative', transition: 'color 0.2s',
+                        }}
+                      >
+                        <span>{link.label}</span>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" strokeWidth="2"
+                          style={{ transition: 'transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)', transform: categoriesExpanded ? 'rotate(180deg)' : 'rotate(0)' }}>
+                          <polyline points="6 9 12 15 18 9"/>
+                        </svg>
+                      </button>
+                      <div style={{
+                        maxHeight: categoriesExpanded ? 300 : 0, overflow: 'hidden',
+                        transition: 'max-height 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
+                        background: 'var(--cream)',
+                      }}>
+                        {SEED_CATEGORIES.filter(c => !c.is_men).map(cat => (
+                          <Link
+                            key={cat.slug}
+                            to={`/catalogo?categoria=${cat.slug}`}
+                            onClick={() => setMenuOpen(false)}
+                            className="menu-link menu-sublink"
+                            style={{
+                              display: 'block', padding: '11px 32px 11px 48px',
+                              fontSize: 14, fontWeight: 400, color: 'var(--text-soft)',
+                              textDecoration: 'none', transition: 'color 0.15s',
+                            }}
+                          >
+                            {cat.name}
+                          </Link>
+                        ))}
+                      </div>
+                    </>
+                  ) : link.expandable ? (
                     /* Expandable Brands section */
                     <>
                       <button

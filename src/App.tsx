@@ -31,6 +31,7 @@ import { PoliticasEnvioPage } from './pages/PoliticasEnvioPage';
 import { PoliticasReembolsoPage } from './pages/PoliticasReembolsoPage';
 import { MisListasPage } from './pages/MisListasPage';
 import { CartPage } from './pages/CartPage';
+import { SobreNosotrasPage } from './pages/SobreNosotrasPage';
 import { NotFoundPage } from './pages/NotFoundPage';
 import { WhatsAppFloat } from './components/WhatsAppFloat';
 import { BackToTop } from './components/ui/BackToTop';
@@ -103,6 +104,7 @@ export default function App() {
       <Route path="/politicas-reembolso" element={<PublicLayout><PoliticasReembolsoPage /></PublicLayout>} />
       <Route path="/mis-listas" element={<PublicLayout><MisListasPage /></PublicLayout>} />
       <Route path="/carrito" element={<PublicLayout><CartPage /></PublicLayout>} />
+      <Route path="/sobre-nosotras" element={<PublicLayout><SobreNosotrasPage /></PublicLayout>} />
 
       {/* Admin routes (backward compatible, also for localhost testing) */}
       <Route path="/admin" element={<AdminLayout />}>

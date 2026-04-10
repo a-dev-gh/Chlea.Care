@@ -333,7 +333,7 @@ export function HomePage() {
 
           {/* Link to full story — scrolls to about section on the same page */}
           <div style={{ marginTop: 32 }}>
-            <a href="#about" style={{
+            <a href="/sobre-nosotras" style={{
               display: 'inline-flex', alignItems: 'center', gap: 8,
               color: 'var(--hot)', fontSize: 14, fontWeight: 600,
               textDecoration: 'none', borderBottom: '1.5px solid var(--hot)',
