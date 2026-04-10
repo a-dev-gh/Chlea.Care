@@ -576,7 +576,7 @@ DECLARE
   result jsonb;
 BEGIN
   INSERT INTO public.whatsapp_orders (customer_name, customer_phone, items, total, status, user_id)
-  VALUES (p_customer_name, p_customer_phone, p_items, p_total, p_status::public."OrderStatus", p_user_id)
+  VALUES (p_customer_name, p_customer_phone, p_items, p_total, p_status, p_user_id)
   RETURNING jsonb_build_object('id', id, 'order_number', order_number, 'created_at', created_at)
   INTO result;
   RETURN result;
