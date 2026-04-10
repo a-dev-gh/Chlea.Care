@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useProducts } from '../hooks/useProducts';
 import { ProductGrid } from '../components/product/ProductGrid';
+import { formatPrice } from '../utils/formatPrice';
 
 const SORT_OPTIONS = [
   { value: 'relevancia',  label: 'Relevancia' },
@@ -57,6 +58,18 @@ export function MensCatalogPage() {
       .sort((a, b) => a.name.localeCompare(b.name));
   }, [menProducts]);
 
+  const hasActiveFilters = selectedBrands.length > 0 || activePills.length > 0 ||
+    minPrice > 200 || maxPrice < 5000 ||
+    Object.values(selectedLabels).some(v => v.length > 0);
+
+  function resetAllFilters() {
+    setSelectedBrands([]);
+    setActivePills([]);
+    setMinPrice(200);
+    setMaxPrice(5000);
+    setSelectedLabels({});
+  }
+
   function togglePill(key: string) {
     setActivePills(prev => prev.includes(key) ? prev.filter(k => k !== key) : [...prev, key]);
   }
@@ -106,6 +119,23 @@ export function MensCatalogPage() {
     return result;
   }, [menProducts, searchQ, minPrice, maxPrice, selectedBrands, sort, activePills, selectedLabels]);
 
+  // Collect active filter tags for the tag strip
+  const activeFilterTags: { label: string; onRemove: () => void }[] = [];
+  activePills.forEach(key => {
+    const pill = FILTER_PILLS.find(p => p.key === key);
+    if (pill) activeFilterTags.push({ label: `${pill.icon} ${pill.label}`, onRemove: () => togglePill(key) });
+  });
+  selectedBrands.forEach(b => {
+    activeFilterTags.push({ label: b, onRemove: () => toggleBrand(b) });
+  });
+  if (minPrice > 200) activeFilterTags.push({ label: `Min: ${formatPrice(minPrice)}`, onRemove: () => setMinPrice(200) });
+  if (maxPrice < 5000) activeFilterTags.push({ label: `Max: ${formatPrice(maxPrice)}`, onRemove: () => setMaxPrice(5000) });
+  Object.entries(selectedLabels).forEach(([group, values]) => {
+    values.forEach(v => {
+      activeFilterTags.push({ label: v, onRemove: () => toggleLabel(group, v) });
+    });
+  });
+
   const FilterSection = ({ title, isOpen, onToggle, children }: {
     title: string; isOpen: boolean; onToggle: () => void; children: React.ReactNode;
   }) => (
@@ -139,9 +169,21 @@ export function MensCatalogPage() {
       </h2>
 
       <div style={{ borderTop: '1px solid rgba(255,194,209,0.15)', paddingTop: 20, marginBottom: 8 }}>
-        <p style={{ fontSize: 12, fontWeight: 700, color: 'var(--pink)', letterSpacing: 1, textTransform: 'uppercase', marginBottom: 16, opacity: 0.7 }}>
-          Filtros
-        </p>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+          <p style={{ fontSize: 12, fontWeight: 700, color: 'var(--pink)', letterSpacing: 1, textTransform: 'uppercase', margin: 0, opacity: 0.7 }}>
+            Filtros
+          </p>
+          {hasActiveFilters && (
+            <button onClick={resetAllFilters} style={{
+              background: 'none', border: 'none', cursor: 'pointer',
+              fontSize: 12, fontWeight: 600, color: 'var(--pink)',
+              fontFamily: 'var(--font-body)', padding: 0,
+              textDecoration: 'underline',
+            }}>
+              Limpiar todo
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Price Range */}
@@ -277,6 +319,41 @@ export function MensCatalogPage() {
               })}
             </div>
 
+            {/* Active filter tags strip */}
+            {activeFilterTags.length > 0 && (
+              <div style={{
+                display: 'flex', gap: 8, flexWrap: 'wrap',
+                marginBottom: 16, alignItems: 'center',
+              }}>
+                {activeFilterTags.map((tag, i) => (
+                  <span key={i} style={{
+                    display: 'inline-flex', alignItems: 'center', gap: 6,
+                    padding: '5px 12px', fontSize: 12, fontWeight: 600,
+                    background: 'rgba(255,194,209,0.1)',
+                    color: 'var(--pink)',
+                    border: '1px solid rgba(255,194,209,0.2)',
+                    borderRadius: 'var(--r-pill)',
+                    fontFamily: 'var(--font-body)',
+                  }}>
+                    {tag.label}
+                    <button onClick={tag.onRemove} style={{
+                      background: 'none', border: 'none', cursor: 'pointer',
+                      color: 'var(--pink)', fontSize: 14, padding: 0,
+                      lineHeight: 1, display: 'flex',
+                    }}>✕</button>
+                  </span>
+                ))}
+                <button onClick={resetAllFilters} style={{
+                  background: 'none', border: 'none', cursor: 'pointer',
+                  fontSize: 12, fontWeight: 600, color: 'rgba(254,250,251,0.5)',
+                  fontFamily: 'var(--font-body)', textDecoration: 'underline',
+                  padding: '5px 4px',
+                }}>
+                  Limpiar todo
+                </button>
+              </div>
+            )}
+
             {/* Results count + sort */}
             <div style={{
               display: 'flex', alignItems: 'center', justifyContent: 'space-between',
@@ -309,7 +386,17 @@ export function MensCatalogPage() {
             ) : (
               <div style={{ textAlign: 'center', padding: '80px 0' }}>
                 <div style={{ fontSize: 52, marginBottom: 16 }}>🔍</div>
-                <p style={{ fontSize: 16, color: 'rgba(254,250,251,0.5)' }}>No hay productos con esos filtros.</p>
+                <p style={{ fontSize: 16, color: 'rgba(254,250,251,0.5)', marginBottom: 16 }}>No hay productos con esos filtros.</p>
+                {hasActiveFilters && (
+                  <button onClick={resetAllFilters} style={{
+                    background: 'var(--pink)', color: 'var(--deep)',
+                    border: 'none', borderRadius: 'var(--r-pill)',
+                    padding: '12px 28px', fontSize: 14, fontWeight: 600,
+                    fontFamily: 'var(--font-body)', cursor: 'pointer',
+                  }}>
+                    Limpiar filtros
+                  </button>
+                )}
               </div>
             )}
           </div>

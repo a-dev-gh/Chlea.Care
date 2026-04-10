@@ -104,6 +104,14 @@ export function AdminOrdenes() {
                 onMouseEnter={e => ((e.currentTarget as HTMLElement).style.background = 'rgba(235,25,130,0.02)')}
                 onMouseLeave={e => ((e.currentTarget as HTMLElement).style.background = 'transparent')}
               >
+                {/* Order number */}
+                <span style={{
+                  fontSize: 13, fontWeight: 700, color: 'var(--deep)',
+                  fontFamily: 'monospace', flexShrink: 0, minWidth: 60,
+                }}>
+                  #{order.order_number ? String(order.order_number).padStart(4, '0') : '—'}
+                </span>
+
                 {/* Customer info */}
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <p style={{ fontSize: 15, fontWeight: 600, color: 'var(--text)', marginBottom: 2 }}>

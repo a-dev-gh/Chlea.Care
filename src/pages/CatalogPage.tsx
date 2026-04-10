@@ -72,15 +72,21 @@ export function CatalogPage() {
     return pills;
   }, [allProducts]);
 
-  // On mount: pre-activate pills and label filters from URL params so promo nav deep-links work
+  // Sync filters from URL params — runs on mount AND when params change (e.g. nav quick-links)
   useEffect(() => {
     const oferta   = params.get('oferta');
     const badge    = params.get('badge');
     const label    = params.get('label');
     const etiqueta = params.get('etiqueta');
 
-    if (oferta === 'true') setActivePills(prev => [...new Set([...prev, 'ofertas'])]);
-    if (badge)             setActivePills(prev => [...new Set([...prev, badge.toLowerCase().replace(/\s+/g, '-')])]);
+    // Sync etiqueta
+    setActiveEtiqueta(etiqueta ? decodeURIComponent(etiqueta) : null);
+
+    // Sync pills from URL
+    const nextPills: string[] = [];
+    if (oferta === 'true') nextPills.push('ofertas');
+    if (badge) nextPills.push(badge.toLowerCase().replace(/\s+/g, '-'));
+    if (nextPills.length > 0) setActivePills(prev => [...new Set([...prev, ...nextPills])]);
 
     // Pre-select label filter when navigating from a nav dropdown with ?label=GroupName:Value
     if (label) {
@@ -92,14 +98,7 @@ export function CatalogPage() {
         }));
       }
     }
-
-    // etiqueta param — store as active filter (resolved against product labels at filter time)
-    if (etiqueta) {
-      setActiveEtiqueta(decodeURIComponent(etiqueta));
-    }
-  // Run only once on mount — intentionally omitting params from deps
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [params]);
 
   // Dynamic brands — only show brands that have products in the selected category
   const brandsInCategory = useMemo(() => {
@@ -189,6 +188,13 @@ export function CatalogPage() {
         : [...current, value];
       return { ...prev, [group]: next };
     });
+    // Clean ?label= param if it matches the toggled value
+    const labelParam = params.get('label');
+    if (labelParam) {
+      const nextParams = new URLSearchParams(params);
+      nextParams.delete('label');
+      setParams(nextParams);
+    }
   }
 
   function isLabelGroupOpen(name: string) {

@@ -4,9 +4,10 @@ import { Button } from '../components/ui/Button';
 import { Modal } from '../components/ui/Modal';
 import { ImageUploader } from '../components/ui/ImageUploader';
 import { showToast } from '../components/ui/Toast';
-import { fetchUserProfile, updateUserProfile } from '../utils/db';
+import { fetchUserProfile, updateUserProfile, fetchUserOrders } from '../utils/db';
+import { formatPrice } from '../utils/formatPrice';
 import { supabase } from '../utils/supabase';
-import type { UserProfile, UserAddress } from '../types/database';
+import type { UserProfile, UserAddress, WhatsAppOrder } from '../types/database';
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -240,7 +241,7 @@ export function AccountPage() {
   const { user, role, signIn, signUp, signOut, loading } = useAuthContext();
 
   // Auth form state
-  const [mode, setMode] = useState<'login' | 'signup'>('login');
+  const [mode, setMode] = useState<'login' | 'signup' | 'forgot'>('login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -269,6 +270,10 @@ export function AccountPage() {
   const [confirmNewPassword, setConfirmNewPassword] = useState('');
   const [savingPassword, setSavingPassword] = useState(false);
 
+  // Tab 4 — Pedidos
+  const [orders, setOrders] = useState<WhatsAppOrder[]>([]);
+  const [ordersLoading, setOrdersLoading] = useState(false);
+
   // Load profile when user is available
   useEffect(() => {
     if (!user) return;
@@ -285,10 +290,20 @@ export function AccountPage() {
     });
   }, [user]);
 
+  // Lazy-load orders when the Pedidos tab is viewed
+  useEffect(() => {
+    if (!user || activeTab !== 'pedidos') return;
+    setOrdersLoading(true);
+    fetchUserOrders(user.id).then(data => {
+      setOrders(data);
+      setOrdersLoading(false);
+    });
+  }, [user, activeTab]);
+
   // ---------------------------------------------------------------------------
   // Auth form handlers
   // ---------------------------------------------------------------------------
-  function switchMode(next: 'login' | 'signup') {
+  function switchMode(next: 'login' | 'signup' | 'forgot') {
     setMode(next);
     setError('');
     setSuccessMsg('');
@@ -326,6 +341,20 @@ export function AccountPage() {
       setSuccessMsg('Cuenta creada! Revisa tu correo para confirmar.');
     }
     setSubmitting(false);
+  }
+
+  async function handleForgotPassword(e: React.FormEvent) {
+    e.preventDefault();
+    if (!supabase) { setError('Supabase no configurado'); return; }
+    setSubmitting(true);
+    setError('');
+    setSuccessMsg('');
+    const { error: err } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/cuenta`,
+    });
+    setSubmitting(false);
+    if (err) setError(err.message);
+    else setSuccessMsg('Revisa tu correo electrónico. Te enviamos un enlace para restablecer tu contraseña.');
   }
 
   // ---------------------------------------------------------------------------
@@ -901,53 +930,83 @@ export function AccountPage() {
                 Tab 4: Pedidos
             ============================================================ */}
             {activeTab === 'pedidos' && (
-              <div style={{
-                background: 'var(--white)',
-                border: '1px solid var(--border)',
-                borderRadius: 'var(--r-md)',
-                padding: '36px 24px',
-                textAlign: 'center',
-              }}>
-                {/* Shopping bag icon */}
-                <svg
-                  width="48" height="48" viewBox="0 0 24 24" fill="none"
-                  stroke="var(--pink)" strokeWidth="1.5"
-                  style={{ marginBottom: 16, display: 'block', margin: '0 auto 16px' }}
-                >
-                  <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/>
-                  <line x1="3" y1="6" x2="21" y2="6"/>
-                  <path d="M16 10a4 4 0 0 1-8 0"/>
-                </svg>
-
-                <p style={{ fontSize: 15, color: 'var(--text)', marginBottom: 8, lineHeight: 1.6 }}>
-                  Tu historial de pedidos aparecerá aquí.
-                </p>
-                <p style={{ fontSize: 14, color: 'var(--text-muted)', marginBottom: 24, lineHeight: 1.6 }}>
-                  Los pedidos se realizan por WhatsApp.
-                </p>
-
-                {/* WhatsApp contact link */}
-                <a
-                  href="https://wa.me/18094517690"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  style={{
-                    display: 'inline-flex', alignItems: 'center', gap: 8,
-                    padding: '12px 22px',
-                    borderRadius: 'var(--r-sm)',
-                    background: '#25D366',
-                    color: '#fff',
-                    fontFamily: 'var(--font-body)',
-                    fontWeight: 600, fontSize: 14,
-                    textDecoration: 'none',
-                  }}
-                >
-                  {/* WhatsApp icon */}
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413z"/>
-                  </svg>
-                  ¿Dudas sobre un pedido? Contáctanos
-                </a>
+              <div>
+                {ordersLoading ? (
+                  <div style={{ textAlign: 'center', padding: '60px 0', color: 'var(--text-muted)', fontSize: 15 }}>
+                    Cargando pedidos...
+                  </div>
+                ) : orders.length === 0 ? (
+                  <div style={{
+                    background: 'var(--white)', border: '1px solid var(--border)',
+                    borderRadius: 'var(--r-md)', padding: '36px 24px', textAlign: 'center',
+                  }}>
+                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--pink)" strokeWidth="1.5"
+                      style={{ display: 'block', margin: '0 auto 16px' }}>
+                      <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/>
+                      <line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/>
+                    </svg>
+                    <p style={{ fontSize: 15, color: 'var(--text)', marginBottom: 8 }}>Aún no tienes pedidos.</p>
+                    <p style={{ fontSize: 14, color: 'var(--text-muted)', marginBottom: 24 }}>Los pedidos se realizan por WhatsApp.</p>
+                    <a href="https://wa.me/18094517690" target="_blank" rel="noopener noreferrer"
+                      style={{
+                        display: 'inline-flex', alignItems: 'center', gap: 8, padding: '12px 22px',
+                        borderRadius: 'var(--r-sm)', background: '#25D366', color: '#fff',
+                        fontFamily: 'var(--font-body)', fontWeight: 600, fontSize: 14, textDecoration: 'none',
+                      }}>
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413z"/>
+                      </svg>
+                      ¿Dudas sobre un pedido? Contáctanos
+                    </a>
+                  </div>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                    {orders.map(order => {
+                      const statusConfig: Record<string, { label: string; bg: string; color: string }> = {
+                        pending:   { label: 'Pendiente',  bg: 'rgba(245,158,11,0.1)',  color: '#d97706' },
+                        confirmed: { label: 'Confirmado', bg: 'rgba(59,130,246,0.1)',   color: '#2563eb' },
+                        completed: { label: 'Completado', bg: 'rgba(34,197,94,0.1)',    color: '#16a34a' },
+                        cancelled: { label: 'Cancelado',  bg: 'rgba(239,68,68,0.1)',    color: '#dc2626' },
+                      };
+                      const st = statusConfig[order.status] || statusConfig.pending;
+                      return (
+                        <div key={order.id} style={{
+                          background: 'var(--white)', border: '1px solid var(--border)',
+                          borderRadius: 'var(--r-md)', padding: 20,
+                        }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14, flexWrap: 'wrap', gap: 8 }}>
+                            <div>
+                              <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--deep)', marginRight: 10 }}>
+                                #{order.order_number ? String(order.order_number).padStart(4, '0') : '—'}
+                              </span>
+                              <span style={{ fontSize: 13, color: 'var(--text-muted)' }}>
+                                {new Date(order.created_at).toLocaleDateString('es-DO', { day: 'numeric', month: 'long', year: 'numeric' })}
+                              </span>
+                            </div>
+                            <span style={{
+                              fontSize: 12, fontWeight: 600, padding: '3px 12px',
+                              borderRadius: 999, background: st.bg, color: st.color,
+                            }}>
+                              {st.label}
+                            </span>
+                          </div>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 14 }}>
+                            {order.items.map((item, idx) => (
+                              <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14, color: 'var(--text-soft)' }}>
+                                <span>{item.name} x{item.quantity}</span>
+                                <span style={{ fontWeight: 600 }}>{formatPrice(item.price * item.quantity)}</span>
+                              </div>
+                            ))}
+                          </div>
+                          <div style={{ borderTop: '1px solid var(--border)', paddingTop: 10, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <span style={{ fontSize: 14, color: 'var(--text-muted)', fontWeight: 500 }}>Total</span>
+                            <span style={{ fontSize: 18, fontWeight: 700, color: 'var(--hot)' }}>{formatPrice(order.total)}</span>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
             )}
           </>
@@ -976,8 +1035,6 @@ export function AccountPage() {
   // ---------------------------------------------------------------------------
   // Auth forms (login / signup) — unchanged from original
   // ---------------------------------------------------------------------------
-  const isLogin = mode === 'login';
-
   return (
     <div style={{ maxWidth: 420, margin: '80px auto', padding: '0 24px' }}>
       <h1 style={{
@@ -988,45 +1045,49 @@ export function AccountPage() {
       </h1>
 
       <p style={{ color: 'var(--text-muted)', marginBottom: 32, fontSize: 15 }}>
-        {isLogin
+        {mode === 'forgot'
+          ? 'Recuperar contraseña'
+          : mode === 'login'
           ? 'Inicia sesion para ver tu historial de pedidos.'
           : 'Crea tu cuenta para guardar tus listas y mas.'}
       </p>
 
-      {/* Mode toggle tabs */}
-      <div style={{ display: 'flex', gap: 0, marginBottom: 24 }}>
-        <button
-          type="button"
-          onClick={() => switchMode('login')}
-          style={{
-            flex: 1, padding: '10px 0', fontSize: 14, fontWeight: isLogin ? 700 : 400,
-            fontFamily: 'var(--font-body)', cursor: 'pointer',
-            background: 'none', border: 'none',
-            borderBottom: isLogin ? '2px solid var(--hot)' : '2px solid var(--border2)',
-            color: isLogin ? 'var(--hot)' : 'var(--text-muted)',
-            transition: 'all 0.2s',
-          }}
-        >
-          Iniciar Sesion
-        </button>
-        <button
-          type="button"
-          onClick={() => switchMode('signup')}
-          style={{
-            flex: 1, padding: '10px 0', fontSize: 14, fontWeight: !isLogin ? 700 : 400,
-            fontFamily: 'var(--font-body)', cursor: 'pointer',
-            background: 'none', border: 'none',
-            borderBottom: !isLogin ? '2px solid var(--hot)' : '2px solid var(--border2)',
-            color: !isLogin ? 'var(--hot)' : 'var(--text-muted)',
-            transition: 'all 0.2s',
-          }}
-        >
-          Crear Cuenta
-        </button>
-      </div>
+      {/* Mode toggle tabs (hidden during forgot password) */}
+      {mode !== 'forgot' && (
+        <div style={{ display: 'flex', gap: 0, marginBottom: 24 }}>
+          <button
+            type="button"
+            onClick={() => switchMode('login')}
+            style={{
+              flex: 1, padding: '10px 0', fontSize: 14, fontWeight: mode === 'login' ? 700 : 400,
+              fontFamily: 'var(--font-body)', cursor: 'pointer',
+              background: 'none', border: 'none',
+              borderBottom: mode === 'login' ? '2px solid var(--hot)' : '2px solid var(--border2)',
+              color: mode === 'login' ? 'var(--hot)' : 'var(--text-muted)',
+              transition: 'all 0.2s',
+            }}
+          >
+            Iniciar Sesion
+          </button>
+          <button
+            type="button"
+            onClick={() => switchMode('signup')}
+            style={{
+              flex: 1, padding: '10px 0', fontSize: 14, fontWeight: mode === 'signup' ? 700 : 400,
+              fontFamily: 'var(--font-body)', cursor: 'pointer',
+              background: 'none', border: 'none',
+              borderBottom: mode === 'signup' ? '2px solid var(--hot)' : '2px solid var(--border2)',
+              color: mode === 'signup' ? 'var(--hot)' : 'var(--text-muted)',
+              transition: 'all 0.2s',
+            }}
+          >
+            Crear Cuenta
+          </button>
+        </div>
+      )}
 
       {/* Login form */}
-      {isLogin && (
+      {mode === 'login' && (
         <form onSubmit={handleSignIn} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
           <input
             type="email" placeholder="Correo electronico" required
@@ -1042,11 +1103,54 @@ export function AccountPage() {
           <Button type="submit" fullWidth size="lg" disabled={submitting}>
             {submitting ? 'Entrando...' : 'Iniciar sesion'}
           </Button>
+          <button type="button" onClick={() => switchMode('forgot')} style={{
+            background: 'none', border: 'none', cursor: 'pointer',
+            fontSize: 13, fontWeight: 600, color: 'var(--text-muted)',
+            fontFamily: 'var(--font-body)', textDecoration: 'underline',
+            marginTop: 8, textAlign: 'center', width: '100%',
+          }}>
+            ¿Olvidaste tu contraseña?
+          </button>
+        </form>
+      )}
+
+      {/* Forgot password form */}
+      {mode === 'forgot' && (
+        <form onSubmit={handleForgotPassword} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          <p style={{ fontSize: 14, color: 'var(--text-muted)', lineHeight: 1.5 }}>
+            Te enviaremos un enlace para restablecer tu contraseña.
+          </p>
+          <input
+            type="email" placeholder="Correo electrónico" required
+            value={email} onChange={e => setEmail(e.target.value)}
+            style={inputStyle}
+          />
+          {error && <p style={{ color: 'var(--hot)', fontSize: 13 }}>{error}</p>}
+          {successMsg && (
+            <p style={{
+              color: 'var(--deep)', fontSize: 14,
+              background: 'var(--pink)', borderRadius: 'var(--r-sm)',
+              padding: '12px 16px', lineHeight: 1.4,
+            }}>
+              {successMsg}
+            </p>
+          )}
+          <Button type="submit" fullWidth size="lg" disabled={submitting}>
+            {submitting ? 'Enviando...' : 'Enviar enlace'}
+          </Button>
+          <button type="button" onClick={() => switchMode('login')} style={{
+            background: 'none', border: 'none', cursor: 'pointer',
+            fontSize: 13, fontWeight: 600, color: 'var(--text-muted)',
+            fontFamily: 'var(--font-body)', textDecoration: 'underline',
+            marginTop: 4, textAlign: 'center', width: '100%',
+          }}>
+            Volver a iniciar sesión
+          </button>
         </form>
       )}
 
       {/* Signup form */}
-      {!isLogin && (
+      {mode === 'signup' && (
         <form onSubmit={handleSignUp} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
           <input
             type="email" placeholder="Correo electronico" required

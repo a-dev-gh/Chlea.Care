@@ -164,12 +164,16 @@ export interface OrderLineItem {
 /** An order placed via WhatsApp checkout. */
 export interface WhatsAppOrder {
   id: string;
+  /** Auto-incrementing human-readable order number. */
+  order_number?: number;
   customer_name: string;
   customer_phone: string;
   items: OrderLineItem[];
   /** Order total in whole Dominican pesos. */
   total: number;
   status: OrderStatus;
+  /** Supabase auth user id (null for anonymous/guest orders). */
+  user_id?: string;
   created_at: string;
 }
 

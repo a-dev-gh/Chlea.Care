@@ -7,7 +7,7 @@ E-commerce platform and admin dashboard for a beauty and skincare brand. Feature
 ## Tech Stack
 
 - **Frontend:** React 18 + TypeScript + Vite 5
-- **State:** Zustand (cart, auth, site settings)
+- **State:** Zustand (cart), React Context (auth, settings)
 - **Routing:** React Router 6
 - **Auth & Database:** Supabase (PostgreSQL + Auth + RLS)
 - **Hosting:** Cloudflare Workers
@@ -15,9 +15,12 @@ E-commerce platform and admin dashboard for a beauty and skincare brand. Feature
 ## Features
 
 ### Storefront
-- **Product Catalog** -- Filterable grid with badges (hot, sale), brand filtering, and category navigation
+- **Product Catalog** -- Filterable grid with badges, brand/label/price filtering, active filter tags, and category navigation
+- **Men's Catalog** -- Dedicated section with dark theme and separate filters
 - **Brand Pages** -- Individual brand profiles with filtered product listings
-- **Shopping Cart** -- Slide-out drawer with WhatsApp order integration
+- **Shopping Cart** -- Slide-out drawer with full checkout page and WhatsApp order integration
+- **User Accounts** -- Profile management, saved addresses, order history, password reset
+- **Checkout** -- Auto-fill from profile, bank transfer or COD payment, Santo Domingo / Interior delivery
 - **Wish Lists** -- User-created lists for saving products
 - **Blog** -- Articles and posts with rich text content
 - **Testimonials** -- Customer review carousel
@@ -58,29 +61,27 @@ VITE_R2_BUCKET_URL=your_r2_bucket_url
 
 ### Database Setup
 
-SQL migration and seed files are in `supabase/`:
+Run migration SQL in the Supabase SQL Editor (Dashboard > SQL Editor):
 
-```bash
-# Apply schema
-psql -f supabase/migration.sql
-
-# Load seed data
-psql -f supabase/seed.sql
-```
+1. Copy the contents of `supabase/migration.sql`
+2. Paste and run in the Supabase SQL Editor
+3. The site works without Supabase (falls back to seed data) for local development
 
 ## Project Structure
 
 ```
 src/
-  components/    # Shared UI (Button, Modal, Toast, Skeleton, Badge, etc.)
+  components/    # Shared UI (Button, Modal, Toast, ProductGrid, CartDrawer, etc.)
   pages/         # Public storefront pages
-  admin/         # Admin panel pages and components
-  hooks/         # useAuth, useProducts, useCart, useLists, useSiteSettings
-  lib/           # Supabase client
-  store/         # Zustand stores
+  pages/admin/   # Admin panel pages
+  hooks/         # useAuth, useProducts, useCart, useLists, useSiteSettings, useBadges
+  contexts/      # AuthContext (Supabase Auth provider)
+  utils/         # supabase.ts, db.ts, adminApi.ts, whatsapp.ts, formatPrice.ts
+  types/         # TypeScript interfaces for all DB tables
+  data/          # Seed/fallback data (used when Supabase is not configured)
+  styles/        # CSS tokens, global styles, animations
 supabase/
-  migration.sql  # Database schema with RLS policies
-  seed.sql       # Initial data
+  migration.sql  # Database schema with RLS policies (run in Supabase SQL Editor)
 ```
 
 ## Deployment

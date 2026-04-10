@@ -1,9 +1,11 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCart } from '../hooks/useCart';
+import { useAuthContext } from '../contexts/AuthContext';
 import { formatPrice } from '../utils/formatPrice';
 import { openWhatsApp } from '../utils/whatsapp';
-import { insertOrder } from '../utils/db';
+import { insertOrder, fetchUserProfile } from '../utils/db';
+import type { UserAddress } from '../types/database';
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -39,6 +41,7 @@ function thumbGradient(badge?: string): string {
 export function CartPage() {
   const navigate = useNavigate();
   const { items, removeItem, updateQty, total, clearCart } = useCart();
+  const { user } = useAuthContext();
 
   // Form state
   const [payment, setPayment] = useState<PaymentMethod>('');
@@ -52,6 +55,26 @@ export function CartPage() {
   const [phone, setPhone] = useState('');
   const [errors, setErrors] = useState<string[]>([]);
   const [sending, setSending] = useState(false);
+  const [showConfirmation, setShowConfirmation] = useState(false);
+  const [savedAddresses, setSavedAddresses] = useState<UserAddress[]>([]);
+
+  // Auto-fill from profile when logged in
+  useEffect(() => {
+    if (!user) return;
+    fetchUserProfile(user.id).then(profile => {
+      if (!profile) return;
+      if (!name && profile.full_name) setName(profile.full_name);
+      if (!phone && profile.phone) setPhone(profile.phone);
+      if (profile.addresses?.length) {
+        setSavedAddresses(profile.addresses);
+        const defaultAddr = profile.addresses.find(a => a.is_default);
+        if (defaultAddr && !address) {
+          setAddress(defaultAddr.address + (defaultAddr.city ? `, ${defaultAddr.city}` : ''));
+        }
+      }
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user]);
 
   // ── Validation ─────────────────────────────────────────────────────────────
 
@@ -60,9 +83,14 @@ export function CartPage() {
     if (items.length === 0) errs.push('Tu carrito está vacío.');
     if (!name.trim()) errs.push('Nombre es requerido.');
     if (!phone.trim()) errs.push('Teléfono / WhatsApp es requerido.');
+    else {
+      const digits = phone.replace(/\D/g, '');
+      if (digits.length < 10 || digits.length > 11) errs.push('Teléfono debe tener 10-11 dígitos.');
+    }
     if (!payment) errs.push('Selecciona un método de pago.');
     if (payment === 'transferencia' && !bank) errs.push('Selecciona un banco.');
     if (!delivery) errs.push('Selecciona un método de entrega.');
+    if (payment === 'efectivo' && delivery === 'interior') errs.push('Efectivo contra entrega solo disponible en Santo Domingo.');
     if (delivery === 'santo-domingo' && !address.trim()) errs.push('Dirección es requerida.');
     if (delivery === 'interior') {
       if (!transport) errs.push('Selecciona un transporte.');
@@ -74,7 +102,7 @@ export function CartPage() {
 
   // ── Build WhatsApp message ─────────────────────────────────────────────────
 
-  function buildCheckoutMessage(): string {
+  function buildCheckoutMessage(orderNum?: number): string {
     const itemLines = items
       .map(i => `  • ${i.name} x${i.quantity} — ${formatPrice(i.price * i.quantity)}`)
       .join('\n');
@@ -87,8 +115,10 @@ export function CartPage() {
       ? `Santo Domingo — ${address}`
       : `Interior del país (${transport === 'Otro' ? transportOther : transport}) — ${city}`;
 
+    const orderLabel = orderNum ? `#${String(orderNum).padStart(4, '0')}` : '';
+
     return [
-      `*Nuevo Pedido — Chlea Care*`,
+      `*Nuevo Pedido — Chlea Care*${orderLabel ? ` ${orderLabel}` : ''}`,
       ``,
       `*Cliente:* ${name}`,
       `*Teléfono:* ${phone}`,
@@ -114,9 +144,10 @@ export function CartPage() {
     setErrors([]);
     setSending(true);
 
+    let orderNum: number | undefined;
     try {
       // Attempt to save order to Supabase (non-blocking if not configured)
-      await insertOrder({
+      const saved = await insertOrder({
         customer_name: name.trim(),
         customer_phone: phone.trim(),
         items: items.map(i => ({
@@ -127,14 +158,56 @@ export function CartPage() {
         })),
         total: total(),
         status: 'pending',
+        ...(user?.id ? { user_id: user.id } : {}),
       });
+      orderNum = saved?.order_number;
     } catch {
       // Supabase not configured — continue to WhatsApp
     }
 
-    openWhatsApp(buildCheckoutMessage());
+    openWhatsApp(buildCheckoutMessage(orderNum));
     clearCart();
+    setShowConfirmation(true);
     setSending(false);
+  }
+
+  // ── Order confirmation ──────────────────────────────────────────────────────
+
+  if (showConfirmation) {
+    return (
+      <div style={styles.emptyWrap}>
+        <div style={{
+          width: 72, height: 72, borderRadius: '50%',
+          background: 'rgba(34,197,94,0.1)', display: 'flex',
+          alignItems: 'center', justifyContent: 'center',
+          margin: '0 auto 20px',
+        }}>
+          <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#22c55e" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <polyline points="20 6 9 17 4 12"/>
+          </svg>
+        </div>
+        <h2 style={styles.emptyTitle}>Pedido Confirmado</h2>
+        <p style={styles.emptyText}>
+          Tu pedido ha sido confirmado y será procesado en un plazo de 24 horas.
+        </p>
+        <p style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 28 }}>
+          Te hemos redirigido a WhatsApp para confirmar los detalles.
+        </p>
+        <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap' }}>
+          <button onClick={() => navigate('/catalogo')} style={styles.ctaBtn}>
+            Explorar catálogo
+          </button>
+          <button onClick={() => navigate('/cuenta')} style={{
+            ...styles.ctaBtn,
+            background: 'var(--white)',
+            color: 'var(--deep)',
+            border: '2px solid var(--border2)',
+          }}>
+            Ver mi cuenta
+          </button>
+        </div>
+      </div>
+    );
   }
 
   // ── Empty state ────────────────────────────────────────────────────────────
@@ -252,7 +325,7 @@ export function CartPage() {
                 name="payment"
                 value="efectivo"
                 checked={payment === 'efectivo'}
-                onChange={() => setPayment('efectivo')}
+                onChange={() => { setPayment('efectivo'); if (delivery === 'interior') setDelivery('santo-domingo'); }}
                 style={styles.radioInput}
               />
               <div>
@@ -286,6 +359,28 @@ export function CartPage() {
                     <p style={styles.note}>
                       Envío por motorista. Entrega en 2-24 horas.
                     </p>
+                    {savedAddresses.length > 0 && (
+                      <div>
+                        <label style={{ fontSize: 12, color: 'var(--text-muted)', fontWeight: 600, display: 'block', marginBottom: 6 }}>
+                          Usar dirección guardada
+                        </label>
+                        <select
+                          onChange={e => {
+                            const addr = savedAddresses.find(a => a.id === e.target.value);
+                            if (addr) setAddress(addr.address + (addr.city ? `, ${addr.city}` : ''));
+                          }}
+                          style={styles.select}
+                          defaultValue=""
+                        >
+                          <option value="">Seleccionar...</option>
+                          {savedAddresses.map(a => (
+                            <option key={a.id} value={a.id}>
+                              {a.label} — {a.address}, {a.city}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    )}
                     <input
                       type="text"
                       placeholder="Dirección de entrega"
@@ -298,17 +393,26 @@ export function CartPage() {
               </div>
             </label>
 
-            <label style={styles.radioCard(delivery === 'interior')}>
+            <label style={{
+              ...styles.radioCard(delivery === 'interior'),
+              ...(payment === 'efectivo' ? { opacity: 0.4, pointerEvents: 'none' as const, cursor: 'not-allowed' } : {}),
+            }}>
               <input
                 type="radio"
                 name="delivery"
                 value="interior"
                 checked={delivery === 'interior'}
                 onChange={() => setDelivery('interior')}
+                disabled={payment === 'efectivo'}
                 style={styles.radioInput}
               />
               <div style={{ flex: 1 }}>
                 <strong style={styles.radioLabel}>Interior del país</strong>
+                {payment === 'efectivo' && (
+                  <p style={{ ...styles.note, color: 'var(--hot)', marginTop: 4 }}>
+                    Efectivo contra entrega solo disponible en Santo Domingo.
+                  </p>
+                )}
                 {delivery === 'interior' && (
                   <div style={styles.subSection}>
                     <select

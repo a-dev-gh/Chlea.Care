@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCart } from '../../hooks/useCart';
 import { formatPrice } from '../../utils/formatPrice';
@@ -5,6 +6,18 @@ import { formatPrice } from '../../utils/formatPrice';
 export function CartDrawer() {
   const { isOpen, closeCart, items, removeItem, updateQty, total } = useCart();
   const navigate = useNavigate();
+
+  // Hide WhatsApp float & bottom nav when cart is open
+  useEffect(() => {
+    const waFloat = document.querySelector('.wa-float') as HTMLElement | null;
+    const bottomNav = document.querySelector('nav[style*="position: fixed"]') as HTMLElement | null;
+    if (isOpen) {
+      if (waFloat) waFloat.style.display = 'none';
+    } else {
+      if (waFloat) waFloat.style.display = '';
+    }
+    return () => { if (waFloat) waFloat.style.display = ''; };
+  }, [isOpen]);
 
   function handleCheckout() {
     if (items.length === 0) return;
@@ -20,7 +33,7 @@ export function CartDrawer() {
       <div
         onClick={closeCart}
         style={{
-          position: 'fixed', inset: 0, zIndex: 150,
+          position: 'fixed', inset: 0, zIndex: 250,
           background: 'rgba(85,40,20,0.4)',
           backdropFilter: 'blur(6px)',
         }}
@@ -30,8 +43,9 @@ export function CartDrawer() {
       <div
         className="animate-slide-in-right"
         style={{
-          position: 'fixed', top: 0, right: 0, bottom: 0, zIndex: 151,
+          position: 'fixed', top: 0, right: 0, bottom: 0, zIndex: 251,
           width: '100%', maxWidth: 420,
+          height: '100dvh',
           background: 'var(--white)',
           boxShadow: '-8px 0 40px rgba(85,40,20,0.18)',
           display: 'flex', flexDirection: 'column',
@@ -138,6 +152,7 @@ export function CartDrawer() {
             padding: '20px 24px',
             borderTop: '1px solid var(--border)',
             background: 'var(--cream)',
+            flexShrink: 0,
           }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16 }}>
               <span style={{ fontSize: 15, color: 'var(--text-soft)' }}>Total</span>

@@ -539,3 +539,22 @@ CREATE INDEX idx_list_items_list_id  ON public.list_items(list_id);
 CREATE INDEX idx_nav_dropdowns_cat   ON public.nav_dropdowns(category_slug);
 CREATE INDEX idx_instagram_sort      ON public.instagram_posts(sort_order);
 CREATE INDEX idx_whatsapp_status     ON public.whatsapp_orders(status);
+
+
+-- =========================================================================
+-- 17. LINK ORDERS TO AUTHENTICATED USERS
+-- =========================================================================
+-- Add user_id to whatsapp_orders (nullable for anonymous/guest orders)
+ALTER TABLE public.whatsapp_orders
+  ADD COLUMN IF NOT EXISTS user_id uuid REFERENCES auth.users(id) ON DELETE SET NULL;
+
+CREATE INDEX IF NOT EXISTS idx_whatsapp_orders_user_id ON public.whatsapp_orders(user_id);
+
+-- Allow authenticated users to SELECT their own orders
+CREATE POLICY "whatsapp_orders: user select own"
+  ON public.whatsapp_orders FOR SELECT
+  USING (user_id = auth.uid());
+
+-- Human-readable sequential order number (auto-increments)
+ALTER TABLE public.whatsapp_orders
+  ADD COLUMN IF NOT EXISTS order_number serial;

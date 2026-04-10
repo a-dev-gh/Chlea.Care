@@ -241,6 +241,24 @@ export async function fetchWhatsAppOrders(): Promise<WhatsAppOrder[]> {
   return data as WhatsAppOrder[];
 }
 
+/** Fetch orders for a specific authenticated user, newest first. */
+export async function fetchUserOrders(userId: string): Promise<WhatsAppOrder[]> {
+  if (!supabase) return [];
+
+  const { data, error } = await supabase
+    .from('whatsapp_orders')
+    .select('*')
+    .eq('user_id', userId)
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    console.warn('[db] fetchUserOrders failed:', error.message);
+    return [];
+  }
+
+  return data as WhatsAppOrder[];
+}
+
 // ---------------------------------------------------------------------------
 // Mutations
 // ---------------------------------------------------------------------------
