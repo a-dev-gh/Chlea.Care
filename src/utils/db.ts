@@ -263,7 +263,9 @@ export async function fetchUserOrders(userId: string): Promise<WhatsAppOrder[]> 
 // Mutations
 // ---------------------------------------------------------------------------
 
-/** Insert a new WhatsApp order (from cart checkout flow). */
+/** Insert a new WhatsApp order (from cart checkout flow).
+ *  Uses an RPC function (SECURITY DEFINER) so the order_number is always
+ *  returned, regardless of whether the caller is a guest or logged-in user. */
 export async function insertOrder(
   order: Omit<WhatsAppOrder, 'id' | 'created_at'>,
 ): Promise<WhatsAppOrder | null> {
@@ -271,6 +273,28 @@ export async function insertOrder(
     console.warn('[db] insertOrder skipped — Supabase not configured.');
     return null;
   }
+
+  // Try RPC function first (reliable order_number return for all users)
+  const { data: rpcData, error: rpcError } = await supabase.rpc('insert_order', {
+    p_customer_name: order.customer_name,
+    p_customer_phone: order.customer_phone,
+    p_items: order.items,
+    p_total: order.total,
+    p_status: order.status || 'pending',
+    p_user_id: order.user_id || null,
+  });
+
+  if (!rpcError && rpcData) {
+    return {
+      ...order,
+      id: rpcData.id,
+      order_number: rpcData.order_number,
+      created_at: rpcData.created_at,
+    } as WhatsAppOrder;
+  }
+
+  // Fallback: direct insert (order_number may not be returned for guests)
+  if (rpcError) console.warn('[db] insertOrder RPC failed, falling back to direct insert:', rpcError.message);
 
   const { data, error } = await supabase
     .from('whatsapp_orders')

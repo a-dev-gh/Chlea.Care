@@ -558,3 +558,27 @@ CREATE POLICY "whatsapp_orders: user select own"
 -- Human-readable sequential order number (auto-increments)
 ALTER TABLE public.whatsapp_orders
   ADD COLUMN IF NOT EXISTS order_number serial;
+
+-- =========================================================================
+-- 18. INSERT ORDER FUNCTION (bypasses RLS for RETURNING)
+-- =========================================================================
+-- Needed so both guests and logged-in users get the order_number back
+CREATE OR REPLACE FUNCTION public.insert_order(
+  p_customer_name text,
+  p_customer_phone text,
+  p_items jsonb,
+  p_total integer,
+  p_status text DEFAULT 'pending',
+  p_user_id uuid DEFAULT NULL
+) RETURNS jsonb
+LANGUAGE plpgsql SECURITY DEFINER AS $$
+DECLARE
+  result jsonb;
+BEGIN
+  INSERT INTO public.whatsapp_orders (customer_name, customer_phone, items, total, status, user_id)
+  VALUES (p_customer_name, p_customer_phone, p_items, p_total, p_status::public."OrderStatus", p_user_id)
+  RETURNING jsonb_build_object('id', id, 'order_number', order_number, 'created_at', created_at)
+  INTO result;
+  RETURN result;
+END;
+$$;
