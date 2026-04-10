@@ -39,6 +39,7 @@ export function CatalogPage() {
   const [selectedLabels, setSelectedLabels] = useState<Record<string, string[]>>({});
   const [catalogSearch, setCatalogSearch] = useState(params.get('q') || '');
   const [activeEtiqueta, setActiveEtiqueta] = useState<string | null>(params.get('etiqueta'));
+  const [activeDescuento, setActiveDescuento] = useState<number | null>(null);
   const [brandsData, setBrandsData] = useState<Brand[]>([]);
 
   const category = params.get('categoria') || 'todos';
@@ -74,21 +75,35 @@ export function CatalogPage() {
 
   // Sync filters from URL params — runs on mount AND when params change (e.g. nav quick-links)
   useEffect(() => {
-    const oferta   = params.get('oferta');
-    const badge    = params.get('badge');
-    const label    = params.get('label');
-    const etiqueta = params.get('etiqueta');
+    const oferta    = params.get('oferta');
+    const badge     = params.get('badge');
+    const label     = params.get('label');
+    const etiqueta  = params.get('etiqueta');
+    const urlMin    = params.get('min');
+    const urlMax    = params.get('max');
+    const descuento = params.get('descuento');
 
     // Sync etiqueta
     setActiveEtiqueta(etiqueta ? decodeURIComponent(etiqueta) : null);
 
-    // Sync pills from URL
+    // Sync pills from URL — replace (not merge) so deactivated pills don't persist
     const nextPills: string[] = [];
     if (oferta === 'true') nextPills.push('ofertas');
-    if (badge) nextPills.push(badge.toLowerCase().replace(/\s+/g, '-'));
-    if (nextPills.length > 0) setActivePills(prev => [...new Set([...prev, ...nextPills])]);
+    if (badge) {
+      for (const b of badge.split(',')) {
+        nextPills.push(b.trim().toLowerCase().replace(/\s+/g, '-'));
+      }
+    }
+    setActivePills(nextPills);
 
-    // Pre-select label filter when navigating from a nav dropdown with ?label=GroupName:Value
+    // Sync price from TopNav search params
+    if (urlMin) setMinPrice(Number(urlMin));
+    if (urlMax) setMaxPrice(Number(urlMax));
+
+    // Sync discount filter (stored as state for useMemo)
+    setActiveDescuento(descuento ? Number(descuento) : null);
+
+    // Pre-select label filter from ?label=GroupName:Value or ?label_GroupName=val1,val2
     if (label) {
       const [group, value] = label.split(':');
       if (group && value) {
@@ -97,6 +112,17 @@ export function CatalogPage() {
           [decodeURIComponent(group)]: [decodeURIComponent(value)],
         }));
       }
+    }
+    // TopNav label_* params (label_GroupName=val1,val2)
+    const nextLabels: Record<string, string[]> = {};
+    for (const [key, val] of params.entries()) {
+      if (key.startsWith('label_')) {
+        const group = decodeURIComponent(key.slice(6).replace(/_/g, ' '));
+        nextLabels[group] = val.split(',').map(v => decodeURIComponent(v.trim()));
+      }
+    }
+    if (Object.keys(nextLabels).length > 0) {
+      setSelectedLabels(prev => ({ ...prev, ...nextLabels }));
     }
   }, [params]);
 
@@ -132,7 +158,7 @@ export function CatalogPage() {
   const hasActiveFilters = selectedBrands.length > 0 || activePills.length > 0 ||
     minPrice > 200 || maxPrice < 5000 ||
     Object.values(selectedLabels).some(v => v.length > 0) ||
-    searchQ.length > 0 || !!activeEtiqueta;
+    searchQ.length > 0 || !!activeEtiqueta || !!activeDescuento;
 
   function resetAllFilters() {
     setSelectedBrands([]);
@@ -142,6 +168,7 @@ export function CatalogPage() {
     setSelectedLabels({});
     setCatalogSearch('');
     setActiveEtiqueta(null);
+    setActiveDescuento(null);
     const next = new URLSearchParams();
     if (category !== 'todos') next.set('categoria', category);
     setParams(next);
@@ -173,7 +200,27 @@ export function CatalogPage() {
   }
 
   function togglePill(key: string) {
-    setActivePills(prev => prev.includes(key) ? prev.filter(k => k !== key) : [...prev, key]);
+    setActivePills(prev => {
+      const next = prev.includes(key) ? prev.filter(k => k !== key) : [...prev, key];
+
+      // Sync pills to URL params
+      const nextParams = new URLSearchParams(params);
+      if (next.includes('ofertas')) nextParams.set('oferta', 'true');
+      else nextParams.delete('oferta');
+
+      const badgeKeys = next.filter(k => k !== 'ofertas');
+      if (badgeKeys.length > 0) {
+        const badgeValues = badgeKeys
+          .map(k => dynamicPills.find(p => p.key === k)?.badgeValue)
+          .filter(Boolean);
+        nextParams.set('badge', badgeValues.join(','));
+      } else {
+        nextParams.delete('badge');
+      }
+
+      setParams(nextParams);
+      return next;
+    });
   }
 
   function toggleBrand(brand: string) {
@@ -217,6 +264,7 @@ export function CatalogPage() {
         if (pill) result = result.filter(p => p.badge === pill.badgeValue);
       }
     }
+    if (activeDescuento) result = result.filter(p => p.sale_percent >= activeDescuento);
     if (minPrice > 200) result = result.filter(p => p.price >= minPrice);
     if (maxPrice < 5000) result = result.filter(p => p.price <= maxPrice);
     if (selectedBrands.length) result = result.filter(p => selectedBrands.includes(p.brand || ''));
@@ -243,11 +291,22 @@ export function CatalogPage() {
     if (sort === 'precio-asc')  result.sort((a, b) => a.price - b.price);
     if (sort === 'precio-desc') result.sort((a, b) => b.price - a.price);
     return result;
-  }, [category, searchQ, minPrice, maxPrice, selectedBrands, sort, activePills, selectedLabels, dynamicPills, activeEtiqueta]);
+  }, [category, searchQ, minPrice, maxPrice, selectedBrands, sort, activePills, selectedLabels, dynamicPills, activeEtiqueta, activeDescuento]);
 
   // Collect all active filter tags for the tag strip
   const activeFilterTags: { label: string; onRemove: () => void }[] = [];
   if (searchQ) activeFilterTags.push({ label: `"${searchQ}"`, onRemove: removeSearchFilter });
+  if (activeDescuento) {
+    activeFilterTags.push({
+      label: `${activeDescuento}%+ Off`,
+      onRemove: () => {
+        setActiveDescuento(null);
+        const next = new URLSearchParams(params);
+        next.delete('descuento');
+        setParams(next);
+      },
+    });
+  }
   if (activeEtiqueta) {
     activeFilterTags.push({
       label: activeEtiqueta,

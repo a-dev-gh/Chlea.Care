@@ -47,8 +47,8 @@ export function Footer() {
             </h4>
             {[
               { label: 'Catálogo',     to: '/catalogo' },
-              { label: 'Ofertas',      to: '/catalogo?filtro=oferta' },
-              { label: 'Lo más Hot',   to: '/catalogo?filtro=hot' },
+              { label: 'Ofertas',      to: '/catalogo?oferta=true' },
+              { label: 'Lo más Hot',   to: '/catalogo?badge=Hot' },
               { label: 'Para Hombres', to: '/hombres' },
             ].map(l => (
               <Link key={l.label} to={l.to} style={{

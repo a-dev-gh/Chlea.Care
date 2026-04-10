@@ -5,12 +5,12 @@ import { useSiteSettings } from '../../hooks/useSiteSettings';
 
 // All links for desktop
 const ALL_LINKS = [
-  { label: 'Nuevo',       href: '/catalogo?filtro=nuevo',         key: 'nuevo' },
+  { label: 'Nuevo',       href: '/catalogo?badge=Nuevo',          key: 'nuevo' },
   { label: 'Cabello',     href: '/catalogo?categoria=cabello',    key: 'cabello' },
   { label: 'Skincare',    href: '/catalogo?categoria=skincare',   key: 'skincare' },
   { label: 'Accesorios',  href: '/catalogo?categoria=accesorios', key: 'accesorios' },
   { label: 'Marcas',      href: '/marcas',                        key: 'marcas' },
-  { label: 'Ofertas',     href: '/catalogo?filtro=oferta',        key: 'ofertas' },
+  { label: 'Ofertas',     href: '/catalogo?oferta=true',          key: 'ofertas' },
   { label: 'Hombres ♂',  href: '/hombres',                       key: 'hombres', isMen: true },
 ];
 

@@ -217,8 +217,8 @@ export const SEED_NAV_DROPDOWNS: Record<string, NavDropdownItem[]> = {
     { label: 'Lola Cosmetics', href: '/marcas/lola-cosmetics' },
   ],
   'ofertas': [
-    { label: 'Hasta 30% Off', href: '/catalogo?filtro=oferta&descuento=30' },
-    { label: 'Hasta 50% Off', href: '/catalogo?filtro=oferta&descuento=50' },
-    { label: 'Combos & Sets', href: '/catalogo?filtro=oferta&etiqueta=combos' },
+    { label: 'Hasta 30% Off', href: '/catalogo?oferta=true&descuento=30' },
+    { label: 'Hasta 50% Off', href: '/catalogo?oferta=true&descuento=50' },
+    { label: 'Combos & Sets', href: '/catalogo?oferta=true&etiqueta=combos' },
   ],
 };

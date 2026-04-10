@@ -18,7 +18,7 @@ const FILTER_PILLS = [
 ];
 
 export function MensCatalogPage() {
-  const [params] = useSearchParams();
+  const [params, setParams] = useSearchParams();
   const [sort, setSort] = useState('relevancia');
   const [minPrice, setMinPrice] = useState(200);
   const [maxPrice, setMaxPrice] = useState(5000);
@@ -68,6 +68,7 @@ export function MensCatalogPage() {
     setMinPrice(200);
     setMaxPrice(5000);
     setSelectedLabels({});
+    setParams(new URLSearchParams());
   }
 
   function togglePill(key: string) {
